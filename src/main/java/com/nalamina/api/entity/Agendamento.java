@@ -1,0 +1,67 @@
+package com.nalamina.api.entity;
+
+import com.nalamina.api.entity.enums.StatusAgendamento;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "agendamento")
+public class Agendamento {
+
+    @Id
+    @Column(nullable = false, updatable = false)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private Usuario cliente;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profissional_id", nullable = false)
+    private Profissional profissional;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "servico_id", nullable = false)
+    private Servico servico;
+
+    @Column(nullable = false)
+    private LocalDate data;
+
+    @Column(name = "hora_inicio", nullable = false)
+    private LocalTime horaInicio;
+
+    @Column(name = "hora_fim", nullable = false)
+    private LocalTime horaFim;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusAgendamento status;
+
+    @Column(columnDefinition = "TEXT")
+    private String observacao;
+
+    @Builder.Default
+    @Column(name = "criado_em", nullable = false, updatable = false)
+    private LocalDateTime criadoEm = LocalDateTime.now();
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) this.id = UUID.randomUUID();
+    }
+}
