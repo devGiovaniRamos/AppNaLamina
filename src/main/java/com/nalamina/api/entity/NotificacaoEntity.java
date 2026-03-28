@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "notificacao")
-public class Notificacao {
+public class NotificacaoEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -25,11 +25,11 @@ public class Notificacao {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    private UsuarioEntity usuarioEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "agendamento_id")
-    private Agendamento agendamento; // nullable
+    private AgendamentoEntity agendamentoEntity; // nullable
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)

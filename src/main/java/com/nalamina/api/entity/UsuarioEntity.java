@@ -19,7 +19,7 @@ import java.util.UUID;
         name = "usuario",
         uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "email"})
 )
-public class Usuario {
+public class UsuarioEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -27,7 +27,7 @@ public class Usuario {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    private TenantEntity tenantEntity;
 
     @Column(nullable = false, length = 100)
     private String nome;

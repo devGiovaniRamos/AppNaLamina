@@ -1,0 +1,56 @@
+package com.nalamina.api.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(
+        name = "pontuacao",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "tenant_id"})
+)
+public class PontuacaoEntity {
+
+    @Id
+    @Column(nullable = false, updatable = false)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private UsuarioEntity usuarioEntity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private TenantEntity tenantEntity;
+
+    @Builder.Default
+    @Column(name = "pontos_total", nullable = false)
+    private Integer pontosTotal = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer nivel = 1;
+
+    @Builder.Default
+    @Column(name = "atualizado_em", nullable = false)
+    private LocalDateTime atualizadoEm = LocalDateTime.now();
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) this.id = UUID.randomUUID();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.atualizadoEm = LocalDateTime.now();
+    }
+}

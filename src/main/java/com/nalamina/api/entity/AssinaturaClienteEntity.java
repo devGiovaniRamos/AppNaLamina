@@ -1,14 +1,13 @@
 package com.nalamina.api.entity;
 
-import com.nalamina.api.entity.enums.MetodoPagamento;
-import com.nalamina.api.entity.enums.StatusPagamento;
+import com.nalamina.api.entity.enums.StatusAssinatura;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,40 +16,32 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "pagamento")
-public class Pagamento {
+@Table(name = "assinatura_cliente")
+public class AssinaturaClienteEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "agendamento_id", nullable = false)
-    private Agendamento agendamento;
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private UsuarioEntity usuarioEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
-
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal valor;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private MetodoPagamento metodo;
+    @JoinColumn(name = "plano_id", nullable = false)
+    private PlanoAssinaturaEntity plano;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StatusPagamento status;
+    private StatusAssinatura status;
 
-    @Column(name = "pagarme_id", unique = true, length = 100)
-    private String pagarmeId;
+    @Column(name = "pagarme_subscription_id", unique = true, length = 100)
+    private String pagarmeSubscriptionId;
 
-    @Column(name = "pix_qrcode", columnDefinition = "TEXT")
-    private String pixQrcode;
+    @Column(nullable = false)
+    private LocalDate inicio;
 
-    @Column(name = "pago_em")
-    private LocalDateTime pagoEm;
+    private LocalDate fim;
 
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)

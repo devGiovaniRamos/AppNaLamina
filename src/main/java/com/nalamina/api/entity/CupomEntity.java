@@ -1,5 +1,6 @@
 package com.nalamina.api.entity;
 
+import com.nalamina.api.entity.enums.TipoCupom;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -15,8 +17,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "plano_assinatura")
-public class PlanoAssinatura {
+@Table(
+        name = "cupom",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "codigo"})
+)
+public class CupomEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -24,19 +29,26 @@ public class PlanoAssinatura {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    private TenantEntity tenantEntity;
 
-    @Column(nullable = false, length = 100)
-    private String nome;
+    @Column(nullable = false, length = 50)
+    private String codigo;
 
-    @Column(columnDefinition = "TEXT")
-    private String descricao;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TipoCupom tipo;
 
-    @Column(name = "preco_mensal", nullable = false, precision = 10, scale = 2)
-    private BigDecimal precoMensal;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal valor;
 
-    @Column(name = "max_agendamentos")
-    private Integer maxAgendamentos;
+    @Column(name = "uso_maximo")
+    private Integer usoMaximo;
+
+    @Builder.Default
+    @Column(name = "uso_atual", nullable = false)
+    private Integer usoAtual = 0;
+
+    private LocalDate validade;
 
     @Builder.Default
     @Column(nullable = false)
@@ -46,17 +58,8 @@ public class PlanoAssinatura {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    @Builder.Default
-    @Column(name = "atualizado_em", nullable = false)
-    private LocalDateTime atualizadoEm = LocalDateTime.now();
-
     @PrePersist
     public void prePersist() {
         if (this.id == null) this.id = UUID.randomUUID();
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.atualizadoEm = LocalDateTime.now();
     }
 }

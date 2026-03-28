@@ -14,11 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "pontuacao",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "tenant_id"})
-)
-public class Pontuacao {
+@Table(name = "pontuacao_historico")
+public class PontuacaoHistoricoEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -26,31 +23,24 @@ public class Pontuacao {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    private UsuarioEntity usuarioEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    @JoinColumn(name = "agendamento_id")
+    private AgendamentoEntity agendamentoEntity; // nullable — pontos podem vir de outras fontes
 
-    @Builder.Default
-    @Column(name = "pontos_total", nullable = false)
-    private Integer pontosTotal = 0;
-
-    @Builder.Default
     @Column(nullable = false)
-    private Integer nivel = 1;
+    private Integer pontos;
+
+    @Column(nullable = false, length = 100)
+    private String motivo;
 
     @Builder.Default
-    @Column(name = "atualizado_em", nullable = false)
-    private LocalDateTime atualizadoEm = LocalDateTime.now();
+    @Column(name = "criado_em", nullable = false, updatable = false)
+    private LocalDateTime criadoEm = LocalDateTime.now();
 
     @PrePersist
     public void prePersist() {
         if (this.id == null) this.id = UUID.randomUUID();
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.atualizadoEm = LocalDateTime.now();
     }
 }

@@ -18,7 +18,7 @@ import java.util.UUID;
         name = "cupom_uso",
         uniqueConstraints = @UniqueConstraint(columnNames = {"cupom_id", "usuario_id"})
 )
-public class CupomUso {
+public class CupomUsoEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -26,15 +26,15 @@ public class CupomUso {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cupom_id", nullable = false)
-    private Cupom cupom;
+    private CupomEntity cupomEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    private UsuarioEntity usuarioEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "agendamento_id", nullable = false)
-    private Agendamento agendamento;
+    private AgendamentoEntity agendamentoEntity;
 
     @Builder.Default
     @Column(name = "usado_em", nullable = false, updatable = false)

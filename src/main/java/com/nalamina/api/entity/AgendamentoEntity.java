@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "agendamento")
-public class Agendamento {
+public class AgendamentoEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -26,19 +26,19 @@ public class Agendamento {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    private TenantEntity tenantEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
-    private Usuario cliente;
+    private UsuarioEntity cliente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profissional_id", nullable = false)
-    private Profissional profissional;
+    private ProfissionalEntity profissionalEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "servico_id", nullable = false)
-    private Servico servico;
+    private ServicoEntity servicoEntity;
 
     @Column(nullable = false)
     private LocalDate data;
