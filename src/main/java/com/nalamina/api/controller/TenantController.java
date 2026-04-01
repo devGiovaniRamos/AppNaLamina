@@ -32,4 +32,10 @@ public class TenantController {
             @Valid @RequestBody HorarioFuncionamentoRequest request) {
         return ResponseEntity.ok(tenantService.atualizarHorario(request));
     }
+
+    @PutMapping("/horario/todos")
+    public ResponseEntity<BarbeariaResponse> atualizarTodosHorarios(
+            @Valid @RequestBody HorarioFuncionamentoRequest request) {
+        return ResponseEntity.ok(tenantService.atualizarTodosHorarios(request));
+    }
 }

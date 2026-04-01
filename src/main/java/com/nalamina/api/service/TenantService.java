@@ -98,4 +98,33 @@ public class TenantService {
                         .build()).toList())
                 .build();
     }
+
+    @Transactional
+    public BarbeariaResponse atualizarTodosHorarios(HorarioFuncionamentoRequest request) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        TenantEntity tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+
+        for (int dia = 0; dia <= 6; dia++) {
+            int diaFinal = dia;
+            HorarioFuncionamentoEntity horario = horarioRepository
+                    .findByTenantEntity_IdAndDiaSemana(tenantId, dia)
+                    .orElse(HorarioFuncionamentoEntity.builder()
+                            .tenantEntity(tenant)
+                            .diaSemana(diaFinal)
+                            .build());
+
+            horario.setAberto(request.getAberto());
+            horario.setHoraInicio1(request.getHoraInicio1());
+            horario.setHoraFim1(request.getHoraFim1());
+            horario.setHoraInicio2(request.getHoraInicio2());
+            horario.setHoraFim2(request.getHoraFim2());
+            horarioRepository.save(horario);
+        }
+
+        List<HorarioFuncionamentoEntity> horarios = horarioRepository
+                .findByTenantEntity_IdOrderByDiaSemana(tenantId);
+
+        return toResponse(tenant, horarios);
+    }
 }
