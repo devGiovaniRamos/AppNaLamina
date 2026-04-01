@@ -33,6 +33,12 @@ public class TenantEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(length = 255)
+    private String endereco;
+
+    @Column(columnDefinition = "TEXT")
+    private String descricao;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
