@@ -15,13 +15,13 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${JWT_SECRET}")
     private String secret;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${JWT_EXPIRATION_MS}")
     private long accessTokenExpirationMs;
 
-    @Value("${jwt.refresh-expiration-ms}")
+    @Value("${JWT_REFRESH_EXPIRATION_MS}")
     private long refreshTokenExpirationMs;
 
     private Key getKey() {
