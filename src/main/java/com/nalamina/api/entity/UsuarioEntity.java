@@ -35,7 +35,7 @@ public class UsuarioEntity {
     @Column(nullable = false, length = 100)
     private String email;
 
-    @Column(name = "senha_hash", nullable = false, length = 255)
+    @Column(name = "senha_hash", length = 255)
     private String senhaHash;
 
     @Column(length = 20)
