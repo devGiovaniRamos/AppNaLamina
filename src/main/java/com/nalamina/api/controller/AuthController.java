@@ -22,10 +22,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
-            @RequestHeader("X-Tenant-ID") UUID tenantId,
             @Valid @RequestBody LoginRequest request) {
 
-        return ResponseEntity.ok(authService.login(request, tenantId));
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/refresh")

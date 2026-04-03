@@ -27,7 +27,12 @@ public class AuthService {
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public LoginResponse login(LoginRequest request, UUID tenantId) {
+    public LoginResponse login(LoginRequest request) {
+        UsuarioEntity usuario = usuarioRepository
+                .findByEmailAndAtivoTrue(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        UUID tenantId = usuario.getTenantEntity().getId();
         TenantContextHolder.setTenantId(tenantId);
 
         try {
@@ -37,10 +42,6 @@ public class AuthService {
         } finally {
             TenantContextHolder.clear();
         }
-
-        UsuarioEntity usuario = usuarioRepository
-                .findByEmailAndTenantEntity_IdAndAtivoTrue(request.getEmail(), tenantId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         String accessToken = jwtService.generateAccessToken(usuario.getId(), tenantId, usuario.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(usuario.getId(), tenantId);
