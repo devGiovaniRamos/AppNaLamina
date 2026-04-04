@@ -2,10 +2,7 @@ package com.nalamina.api.entity;
 
 import com.nalamina.api.entity.enums.StatusAgendamento;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,16 +26,18 @@ public class AgendamentoEntity {
     private TenantEntity tenantEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id", nullable = false)
-    private UsuarioEntity cliente;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profissional_id", nullable = false)
+    @JoinColumn(name = "profissional_id")
     private ProfissionalEntity profissionalEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "servico_id", nullable = false)
     private ServicoEntity servicoEntity;
+
+    @Column(name = "cliente_nome", nullable = false, length = 100)
+    private String clienteNome;
+
+    @Column(name = "cliente_tel", length = 20)
+    private String clienteTel;
 
     @Column(nullable = false)
     private LocalDate data;
@@ -49,9 +48,10 @@ public class AgendamentoEntity {
     @Column(name = "hora_fim", nullable = false)
     private LocalTime horaFim;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StatusAgendamento status;
+    private StatusAgendamento status = StatusAgendamento.PENDENTE;
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
