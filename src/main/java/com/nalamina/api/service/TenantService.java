@@ -2,6 +2,7 @@ package com.nalamina.api.service;
 
 import com.nalamina.api.dto.tenant.BarbeariaResponse;
 import com.nalamina.api.dto.tenant.HorarioFuncionamentoRequest;
+import com.nalamina.api.dto.tenant.HorarioTodosRequest;
 import com.nalamina.api.dto.tenant.PerfilBarbeariaRequest;
 import com.nalamina.api.entity.HorarioFuncionamentoEntity;
 import com.nalamina.api.entity.TenantEntity;
@@ -9,9 +10,11 @@ import com.nalamina.api.repository.HorarioFuncionamentoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.web.server.ResponseStatusException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -100,10 +103,12 @@ public class TenantService {
     }
 
     @Transactional
-    public BarbeariaResponse atualizarTodosHorarios(HorarioFuncionamentoRequest request) {
+    public BarbeariaResponse atualizarTodosHorarios(HorarioTodosRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         TenantEntity tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+
+        List<HorarioFuncionamentoEntity> horariosParaSalvar = new ArrayList<>();
 
         for (int dia = 0; dia <= 6; dia++) {
             int diaFinal = dia;
@@ -119,8 +124,10 @@ public class TenantService {
             horario.setHoraFim1(request.getHoraFim1());
             horario.setHoraInicio2(request.getHoraInicio2());
             horario.setHoraFim2(request.getHoraFim2());
-            horarioRepository.save(horario);
+            horariosParaSalvar.add(horario);
         }
+
+        horarioRepository.saveAll(horariosParaSalvar);
 
         List<HorarioFuncionamentoEntity> horarios = horarioRepository
                 .findByTenantEntity_IdOrderByDiaSemana(tenantId);

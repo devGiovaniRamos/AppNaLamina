@@ -3,10 +3,7 @@ package com.nalamina.api.entity;
 import com.nalamina.api.entity.enums.MetodoPagamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,10 +25,6 @@ public class PagamentoEntity {
     @JoinColumn(name = "agendamento_id", nullable = false)
     private AgendamentoEntity agendamentoEntity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private UsuarioEntity usuarioEntity;
-
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valor;
 
@@ -39,15 +32,10 @@ public class PagamentoEntity {
     @Column(nullable = false, length = 30)
     private MetodoPagamento metodo;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StatusPagamento status;
-
-    @Column(name = "pagarme_id", unique = true, length = 100)
-    private String pagarmeId;
-
-    @Column(name = "pix_qrcode", columnDefinition = "TEXT")
-    private String pixQrcode;
+    private StatusPagamento status = StatusPagamento.PENDENTE;
 
     @Column(name = "pago_em")
     private LocalDateTime pagoEm;

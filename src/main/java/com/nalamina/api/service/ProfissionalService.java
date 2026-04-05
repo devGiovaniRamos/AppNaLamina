@@ -8,8 +8,10 @@ import com.nalamina.api.repository.ProfissionalRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +33,7 @@ public class ProfissionalService {
     public ProfissionalResponse criar(ProfissionalRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         TenantEntity tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
         ProfissionalEntity profissional = ProfissionalEntity.builder()
                 .tenantEntity(tenant)
@@ -46,7 +48,7 @@ public class ProfissionalService {
     public ProfissionalResponse atualizar(UUID id, ProfissionalRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         ProfissionalEntity profissional = profissionalRepository.findByIdAndTenantEntity_Id(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profissional não encontrado"));
 
         profissional.setNome(request.getNome());
         profissional.setFotoUrl(request.getFotoUrl());
@@ -58,7 +60,7 @@ public class ProfissionalService {
     public void desativar(UUID id) {
         UUID tenantId = TenantContextHolder.getTenantId();
         ProfissionalEntity profissional = profissionalRepository.findByIdAndTenantEntity_Id(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profissional não encontrado"));
 
         profissional.setAtivo(false);
         profissionalRepository.save(profissional);

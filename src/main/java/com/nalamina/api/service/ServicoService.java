@@ -8,8 +8,10 @@ import com.nalamina.api.repository.ServicoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +33,8 @@ public class ServicoService {
     public ServicoResponse criar(ServicoRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         TenantEntity tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+
 
         ServicoEntity servico = ServicoEntity.builder()
                 .tenantEntity(tenant)
@@ -48,7 +51,7 @@ public class ServicoService {
     public ServicoResponse atualizar(UUID id, ServicoRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
 
         servico.setNome(request.getNome());
         servico.setDescricao(request.getDescricao());
@@ -62,7 +65,7 @@ public class ServicoService {
     public void desativar(UUID id) {
         UUID tenantId = TenantContextHolder.getTenantId();
         ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(id, tenantId)
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
 
         servico.setAtivo(false);
         servicoRepository.save(servico);

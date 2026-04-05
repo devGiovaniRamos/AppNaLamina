@@ -1,5 +1,4 @@
 package com.nalamina.api.controller;
-
 import com.nalamina.api.dto.auth.LoginRequest;
 import com.nalamina.api.dto.auth.LoginResponse;
 import com.nalamina.api.dto.auth.RefreshRequest;
@@ -8,7 +7,6 @@ import com.nalamina.api.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -32,11 +30,6 @@ public class AuthController {
             @Valid @RequestBody RefreshRequest request) {
 
         return ResponseEntity.ok(authService.refresh(request.getRefreshToken()));
-    }
-
-    @GetMapping("/hash")
-    public String hash(@RequestParam String senha) {
-        return new BCryptPasswordEncoder().encode(senha);
     }
 
     @PostMapping("/registro")

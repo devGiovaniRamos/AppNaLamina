@@ -32,7 +32,15 @@ public class AgendamentoService {
     @Transactional
     public AgendamentoResponse criar(AgendamentoRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
+        return criarAgendamento(tenantId, request);
+    }
 
+    @Transactional
+    public AgendamentoResponse criarPublico(UUID tenantId, AgendamentoRequest request) {
+        return criarAgendamento(tenantId, request);
+    }
+
+    private AgendamentoResponse criarAgendamento(UUID tenantId, AgendamentoRequest request) {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
@@ -127,13 +135,12 @@ public class AgendamentoService {
     }
 
     private void verificarConflito(UUID profissionalId, AgendamentoRequest request, UUID excludeId) {
-        UUID exclude = excludeId != null ? excludeId : UUID.fromString("00000000-0000-0000-0000-000000000000");
         boolean conflito = agendamentoRepository.existeConflito(
                 profissionalId,
                 request.getData(),
                 request.getHoraInicio(),
                 request.getHoraFim(),
-                exclude,
+                excludeId,
                 StatusAgendamento.CANCELADO
         );
         if (conflito) {

@@ -10,10 +10,13 @@ import com.nalamina.api.repository.UsuarioRepository;
 import com.nalamina.api.security.JwtService;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -30,7 +33,7 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         UsuarioEntity usuario = usuarioRepository
                 .findByEmailAndAtivoTrue(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
 
         UUID tenantId = usuario.getTenantEntity().getId();
         TenantContextHolder.setTenantId(tenantId);
@@ -56,14 +59,14 @@ public class AuthService {
 
     public LoginResponse refresh(String refreshToken) {
         if (!jwtService.isTokenValid(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
-            throw new RuntimeException("Refresh token inválido");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token inválido");
         }
 
         UUID userId = jwtService.extractUserId(refreshToken);
         UUID tenantId = jwtService.extractTenantId(refreshToken);
 
         UsuarioEntity usuario = usuarioRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
 
         String novoAccessToken = jwtService.generateAccessToken(usuario.getId(), tenantId, usuario.getRole().name());
         String novoRefreshToken = jwtService.generateRefreshToken(usuario.getId(), tenantId);
@@ -76,9 +79,10 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
     public LoginResponse registro(RegistroRequest request) {
         if (tenantRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email já cadastrado");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
         }
 
         TenantEntity tenant = TenantEntity.builder()

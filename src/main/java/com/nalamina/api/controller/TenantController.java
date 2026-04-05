@@ -2,6 +2,7 @@ package com.nalamina.api.controller;
 
 import com.nalamina.api.dto.tenant.BarbeariaResponse;
 import com.nalamina.api.dto.tenant.HorarioFuncionamentoRequest;
+import com.nalamina.api.dto.tenant.HorarioTodosRequest;
 import com.nalamina.api.dto.tenant.PerfilBarbeariaRequest;
 import com.nalamina.api.service.TenantService;
 import jakarta.validation.Valid;
@@ -35,7 +36,7 @@ public class TenantController {
 
     @PutMapping("/horario/todos")
     public ResponseEntity<BarbeariaResponse> atualizarTodosHorarios(
-            @Valid @RequestBody HorarioFuncionamentoRequest request) {
+            @Valid @RequestBody HorarioTodosRequest request) {
         return ResponseEntity.ok(tenantService.atualizarTodosHorarios(request));
     }
 }

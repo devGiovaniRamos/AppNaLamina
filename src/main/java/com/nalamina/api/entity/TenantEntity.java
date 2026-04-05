@@ -51,4 +51,7 @@ public class TenantEntity {
     public void prePersist() {
         if (this.id == null) this.id = UUID.randomUUID();
     }
+
+    @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
+    private java.math.BigDecimal taxaAgendamentoPct;
 }

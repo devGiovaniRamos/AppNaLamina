@@ -21,20 +21,32 @@ public interface AgendamentoRepository extends JpaRepository<AgendamentoEntity, 
     Optional<AgendamentoEntity> findByIdAndTenantEntity_Id(UUID id, UUID tenantId);
 
     @Query("""
-        SELECT COUNT(a) > 0 FROM AgendamentoEntity a
-        WHERE a.profissionalEntity.id = :profissionalId
-          AND a.id <> :excludeId
-          AND a.status <> :cancelado
-          AND a.data = :data
-          AND a.horaInicio < :horaFim
-          AND a.horaFim > :horaInicio
-    """)
+    SELECT COUNT(a) > 0 FROM AgendamentoEntity a
+    WHERE a.profissionalEntity.id = :profissionalId
+      AND (:excludeId IS NULL OR a.id <> :excludeId)
+      AND a.status <> :cancelado
+      AND a.data = :data
+      AND a.horaInicio < :horaFim
+      AND a.horaFim > :horaInicio
+""")
     boolean existeConflito(
             @Param("profissionalId") UUID profissionalId,
             @Param("data") LocalDate data,
             @Param("horaInicio") LocalTime horaInicio,
             @Param("horaFim") LocalTime horaFim,
             @Param("excludeId") UUID excludeId,
+            @Param("cancelado") StatusAgendamento cancelado
+    );
+
+    @Query("""
+    SELECT a FROM AgendamentoEntity a
+    WHERE a.tenantEntity.id = :tenantId
+      AND a.data = :data
+      AND a.status <> :cancelado
+""")
+    List<AgendamentoEntity> findAgendamentosAtivos(
+            @Param("tenantId") UUID tenantId,
+            @Param("data") LocalDate data,
             @Param("cancelado") StatusAgendamento cancelado
     );
 }
