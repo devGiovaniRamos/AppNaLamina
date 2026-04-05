@@ -1,218 +1,265 @@
-# NaLâmina — Documentação da API
+# ✂️ NaLâmina API
 
-Base URL: `http://localhost:8080`
-
-Todos os endpoints autenticados exigem dois headers:
-- `Authorization: Bearer <jwt-token>`
-- `X-Tenant-ID: <tenant-uuid>`
-
-Endpoints públicos (`/public/**`) não exigem headers.
+> Backend de uma plataforma SaaS multi-tenant para gestão de barbearias — agendamentos, profissionais, serviços e pagamentos em uma única API.
 
 ---
 
-## Sumário
+## 📋 Sumário
 
-1. [Autenticação](#1-autenticação)
-2. [Barbearia](#2-barbearia)
-3. [Horário de Funcionamento](#3-horário-de-funcionamento)
-4. [Serviços](#4-serviços)
-5. [Profissionais](#5-profissionais)
-6. [Agendamentos (Admin)](#6-agendamentos-admin)
-7. [Agendamentos (Público)](#7-agendamentos-público)
+- [Sobre o Projeto](#-sobre-o-projeto)
+- [Tecnologias](#-tecnologias)
+- [Arquitetura](#-arquitetura)
+- [Como Rodar](#-como-rodar)
+- [Variáveis de Ambiente](#-variáveis-de-ambiente)
+- [Endpoints](#-endpoints)
+    - [Autenticação](#autenticação)
+    - [Barbearia](#barbearia)
+    - [Horário de Funcionamento](#horário-de-funcionamento)
+    - [Serviços](#serviços)
+    - [Profissionais](#profissionais)
+    - [Agendamentos](#agendamentos)
+    - [Pagamentos](#pagamentos)
+    - [Endpoints Públicos](#endpoints-públicos)
+- [Fluxo de Agendamento](#-fluxo-de-agendamento)
+- [Multi-tenancy](#-multi-tenancy)
+- [Roadmap](#-roadmap)
 
 ---
 
-## 1. Autenticação
+## 💈 Sobre o Projeto
 
-### Registrar
+O **NaLâmina** é uma plataforma SaaS voltada para barbearias independentes. Cada barbearia é um **tenant** isolado — dados, configurações e agendamentos são completamente separados entre estabelecimentos.
 
-`POST /auth/register`
+O sistema possui dois fluxos principais:
 
-**Body**
+- **App do admin (Flutter)** — o dono da barbearia gerencia serviços, profissionais, agendamentos e pagamentos
+- **Página web pública** — o cliente acessa via link único da barbearia, escolhe o serviço, data e horário, e agenda sem precisar criar conta
+
+---
+
+## 🛠 Tecnologias
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Linguagem | Java 21 |
+| Framework | Spring Boot 3 |
+| Segurança | Spring Security + JWT |
+| Persistência | Spring Data JPA / Hibernate |
+| Banco de dados | PostgreSQL |
+| Migrations | Flyway |
+| Build | Maven |
+| Hospedagem | Railway |
+
+---
+
+## 🏗 Arquitetura
+
+```
+src/
+├── config/          # Configurações (Security, CORS)
+├── controller/      # Controllers REST
+├── dto/             # DTOs de request e response
+│   ├── auth/
+│   ├── agendamento/
+│   ├── pagamento/
+│   ├── profissional/
+│   ├── servico/
+│   └── tenant/
+├── entity/          # Entidades JPA
+│   └── enums/       # Enums do domínio
+├── repository/      # Repositórios Spring Data
+├── security/        # JWT, filtros, TenantContextHolder
+└── service/         # Regras de negócio
+```
+
+### Isolamento multi-tenant
+
+Todos os dados são isolados por `tenant_id`. O tenant é extraído do JWT em cada requisição autenticada via `TenantContextHolder` (ThreadLocal) e aplicado em todas as queries automaticamente.
+
+```
+Authorization: Bearer <jwt>     → extrai tenantId do token
+X-Tenant-ID: <uuid>             → identifica a barbearia
+```
+
+---
+
+## 🚀 Como Rodar
+
+### Pré-requisitos
+
+- Java 21+
+- Maven
+- PostgreSQL
+
+### Passos
+
+```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/nalamina-api.git
+cd nalamina-api
+
+# Configure as variáveis de ambiente (veja a seção abaixo)
+
+# Execute as migrations e suba a aplicação
+./mvnw spring-boot:run
+```
+
+A API estará disponível em `http://localhost:8080`.
+
+---
+
+## ⚙️ Variáveis de Ambiente
+
+Crie um arquivo `application.yml` ou configure as variáveis de ambiente:
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nalamina
+    username: seu_usuario
+    password: sua_senha
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+jwt:
+  secret: sua_chave_secreta_longa
+  access-token-expiration: 900000      # 15 minutos
+  refresh-token-expiration: 604800000  # 7 dias
+```
+
+---
+
+## 📡 Endpoints
+
+### Autenticação
+
+Todos os endpoints de auth são públicos (sem token).
+
+#### `POST /auth/registro`
+Cria uma nova barbearia e o usuário administrador.
+
 ```json
+// Request
 {
   "nome": "João Silva",
   "email": "joao@barbearia.com",
   "senha": "senha123",
-  "telefone": "21999990000",
-  "role": "OWNER"
+  "nomeBarbearia": "Barbearia do João"
 }
-```
 
-**Response 201**
-```json
+// Response 201
 {
   "accessToken": "eyJ...",
-  "refreshToken": "eyJ..."
+  "refreshToken": "eyJ...",
+  "role": "ADMIN",
+  "nome": "João Silva"
 }
 ```
 
----
+#### `POST /auth/login`
 
-### Login
-
-`POST /auth/login`
-
-**Body**
 ```json
+// Request
 {
   "email": "joao@barbearia.com",
   "senha": "senha123"
 }
-```
 
-**Response 200**
-```json
+// Response 200
 {
   "accessToken": "eyJ...",
+  "refreshToken": "eyJ...",
+  "role": "ADMIN",
+  "nome": "João Silva"
+}
+```
+
+#### `POST /auth/refresh`
+
+```json
+// Request
+{
   "refreshToken": "eyJ..."
+}
+
+// Response 200
+{
+  "accessToken": "eyJ...",
+  "refreshToken": "eyJ...",
+  "role": "ADMIN",
+  "nome": "João Silva"
 }
 ```
 
 ---
 
-### Renovar token
+### Barbearia
 
-`POST /auth/refresh`
+> Requer autenticação. Headers: `Authorization: Bearer <token>` e `X-Tenant-ID: <uuid>`
 
-**Body**
+#### `GET /barbearia`
+Retorna os dados da barbearia do tenant autenticado.
+
+#### `PUT /barbearia/perfil`
+Atualiza nome, telefone, CNPJ, email, endereço e descrição.
+
 ```json
 {
-  "refreshToken": "eyJ..."
-}
-```
-
-**Response 200**
-```json
-{
-  "accessToken": "eyJ...",
-  "refreshToken": "eyJ..."
-}
-```
-
----
-
-## 2. Barbearia
-
-> Requer autenticação. Role: `ADMIN`.
-
-### Buscar dados da barbearia
-
-`GET /barbearia`
-
-**Response 200**
-```json
-{
-  "id": "uuid",
   "nome": "Barbearia do João",
   "telefone": "21999990000",
   "cnpj": "00.000.000/0001-00",
   "email": "joao@barbearia.com",
-  "ativo": true
+  "endereco": "Rua das Flores, 100",
+  "descricao": "A melhor barbearia do bairro"
 }
 ```
 
 ---
 
-### Atualizar dados da barbearia
+### Horário de Funcionamento
 
-`PUT /barbearia`
+#### `PUT /barbearia/horario`
+Atualiza o horário de um dia específico. Suporta até dois turnos por dia.
 
-**Body**
 ```json
 {
-  "nome": "Barbearia do João",
-  "telefone": "21999990000",
-  "cnpj": "00.000.000/0001-00"
-}
-```
-
-**Response 200** — mesmo formato do GET.
-
----
-
-## 3. Horário de Funcionamento
-
-> Requer autenticação. Role: `ADMIN`.
-
-### Listar horários
-
-`GET /barbearia/horario`
-
-**Response 200**
-```json
-[
-  {
-    "diaSemana": 1,
-    "aberto": true,
-    "horaInicio1": "09:00",
-    "horaFim1": "12:00",
-    "horaInicio2": "14:00",
-    "horaFim2": "18:00"
-  },
-  {
-    "diaSemana": 0,
-    "aberto": false,
-    "horaInicio1": null,
-    "horaFim1": null,
-    "horaInicio2": null,
-    "horaFim2": null
-  }
-]
-```
-
-> `diaSemana`: 0 = domingo, 1 = segunda … 6 = sábado.
-
----
-
-### Atualizar horário de um dia
-
-`PUT /barbearia/horario/{diaSemana}`
-
-**Body**
-```json
-{
+  "diaSemana": 1,
   "aberto": true,
   "horaInicio1": "09:00",
   "horaFim1": "12:00",
-  "horaInicio2": "14:00",
+  "horaInicio2": "13:00",
   "horaFim2": "18:00"
 }
 ```
 
-**Response 200** — horário atualizado.
+> `diaSemana`: 0 = domingo, 1 = segunda … 6 = sábado
 
----
+#### `PUT /barbearia/horario/todos`
+Aplica o mesmo horário para todos os dias da semana.
 
-## 4. Serviços
-
-> Requer autenticação. Role: `ADMIN`.
-
-### Listar serviços ativos
-
-`GET /servicos`
-
-**Response 200**
 ```json
-[
-  {
-    "id": "2d816465-0814-46a4-9436-2b538492c8f0",
-    "nome": "Corte simples",
-    "descricao": "Corte na tesoura ou máquina",
-    "duracaoMin": 30,
-    "preco": 35.00,
-    "ativo": true
-  }
-]
+{
+  "aberto": true,
+  "horaInicio1": "09:00",
+  "horaFim1": "18:00",
+  "horaInicio2": null,
+  "horaFim2": null
+}
 ```
 
 ---
 
-### Criar serviço
+### Serviços
 
-`POST /servicos`
+#### `GET /servicos`
+Lista todos os serviços ativos da barbearia.
 
-**Body**
+#### `POST /servicos`
+
 ```json
 {
   "nome": "Corte simples",
@@ -222,55 +269,21 @@ Endpoints públicos (`/public/**`) não exigem headers.
 }
 ```
 
-**Response 201** — serviço criado.
+#### `PUT /servicos/{id}`
+Atualiza um serviço. Body igual ao POST.
+
+#### `DELETE /servicos/{id}`
+Soft delete — desativa o serviço (não remove do banco).
 
 ---
 
-### Atualizar serviço
+### Profissionais
 
-`PUT /servicos/{id}`
+#### `GET /profissionais`
+Lista todos os profissionais ativos da barbearia.
 
-**Body** — mesmo formato do POST.
+#### `POST /profissionais`
 
-**Response 200** — serviço atualizado.
-
----
-
-### Desativar serviço
-
-`DELETE /servicos/{id}`
-
-**Response 204**
-
----
-
-## 5. Profissionais
-
-> Requer autenticação. Role: `ADMIN`.
-
-### Listar profissionais ativos
-
-`GET /profissionais`
-
-**Response 200**
-```json
-[
-  {
-    "id": "uuid",
-    "nome": "Carlos Barbeiro",
-    "fotoUrl": "https://...",
-    "ativo": true
-  }
-]
-```
-
----
-
-### Criar profissional
-
-`POST /profissionais`
-
-**Body**
 ```json
 {
   "nome": "Carlos Barbeiro",
@@ -278,39 +291,20 @@ Endpoints públicos (`/public/**`) não exigem headers.
 }
 ```
 
-**Response 201** — profissional criado.
+#### `PUT /profissionais/{id}`
+Atualiza um profissional. Body igual ao POST.
+
+#### `DELETE /profissionais/{id}`
+Soft delete — desativa o profissional.
 
 ---
 
-### Atualizar profissional
+### Agendamentos
 
-`PUT /profissionais/{id}`
+#### `GET /agendamentos`
+Lista todos os agendamentos do tenant, ordenados por data e hora.
 
-**Body** — mesmo formato do POST.
-
-**Response 200** — profissional atualizado.
-
----
-
-### Desativar profissional
-
-`DELETE /profissionais/{id}`
-
-**Response 204**
-
----
-
-## 6. Agendamentos (Admin)
-
-> Requer autenticação. Role: `ADMIN`.
-
-### Listar agendamentos
-
-`GET /agendamentos`
-
-Retorna todos os agendamentos do tenant ordenados por data e hora.
-
-**Response 200**
+**Response**
 ```json
 [
   {
@@ -331,16 +325,12 @@ Retorna todos os agendamentos do tenant ordenados por data e hora.
 ]
 ```
 
----
+#### `POST /agendamentos`
+Cria um agendamento pelo admin. Profissional é opcional. Se informado, valida conflito de horário.
 
-### Criar agendamento
-
-`POST /agendamentos`
-
-**Body**
 ```json
 {
-  "servicoId": "2d816465-0814-46a4-9436-2b538492c8f0",
+  "servicoId": "uuid",
   "profissionalId": null,
   "clienteNome": "João Silva",
   "clienteTel": "21999990000",
@@ -351,72 +341,80 @@ Retorna todos os agendamentos do tenant ordenados por data e hora.
 }
 ```
 
-> `profissionalId` é opcional. Se informado, valida conflito de horário.
-
-**Respostas**
 | Status | Situação |
 |--------|----------|
-| 201 | Agendamento criado |
+| 201 | Criado com sucesso |
 | 400 | `horaFim` antes ou igual ao `horaInicio` |
 | 404 | Serviço ou profissional não encontrado |
-| 409 | Profissional já possui agendamento no horário |
+| 409 | Conflito de horário com o profissional |
 
----
+#### `PUT /agendamentos/{id}`
+Atualiza um agendamento. Body igual ao POST.
 
-### Atualizar agendamento
+#### `PATCH /agendamentos/{id}/status`
+Atualiza apenas o status do agendamento.
 
-`PUT /agendamentos/{id}`
-
-**Body** — mesmo formato do POST.
-
-**Response 200** — agendamento atualizado.
-
----
-
-### Atualizar status
-
-`PATCH /agendamentos/{id}/status`
-
-**Body**
 ```json
 {
   "status": "CONFIRMADO"
 }
 ```
 
-> Status possíveis: `PENDENTE`, `CONFIRMADO`, `CONCLUIDO`, `CANCELADO`.
+> Status disponíveis: `PENDENTE` `CONFIRMADO` `CONCLUIDO` `CANCELADO`
 
-**Response 200** — agendamento com status atualizado.
-
----
-
-### Cancelar agendamento
-
-`DELETE /agendamentos/{id}`
-
-Define o status como `CANCELADO`.
-
-**Response 204**
+#### `DELETE /agendamentos/{id}`
+Cancela o agendamento (define status como `CANCELADO`). Retorna `204`.
 
 ---
 
-## 7. Agendamentos (Público)
+### Pagamentos
 
-> Sem autenticação. Usado pelo cliente via web. O `tenantId` identifica a barbearia.
+#### `POST /agendamentos/{agendamentoId}/pagamentos`
+Registra o pagamento de um agendamento. Calcula automaticamente a taxa percentual configurada na barbearia. Marca o agendamento como `CONCLUIDO`.
 
-### Listar slots disponíveis
+```json
+// Request
+{
+  "metodo": "PIX"
+}
 
-`GET /public/{tenantId}/slots?data=2026-04-10&servicoId=uuid`
+// Response 201
+{
+  "id": "uuid",
+  "agendamentoId": "uuid",
+  "clienteNome": "João Silva",
+  "servicoNome": "Corte simples",
+  "valorServico": 35.00,
+  "taxaPct": 10.00,
+  "valorTaxa": 3.50,
+  "valorTotal": 38.50,
+  "metodo": "PIX",
+  "status": "PAGO",
+  "pagoEm": "2026-04-10T10:30:00",
+  "criadoEm": "2026-04-10T10:30:00"
+}
+```
 
-Retorna os horários livres do dia baseado no horário de funcionamento da barbearia e nos agendamentos já existentes. Os slots são gerados automaticamente com base na `duracaoMin` do serviço.
+> Métodos disponíveis: `DINHEIRO` `PIX` `CARTAO_CREDITO` `CARTAO_DEBITO`
 
-**Parâmetros**
-| Parâmetro | Tipo | Obrigatório |
-|-----------|------|-------------|
-| `data` | `yyyy-MM-dd` | Sim |
-| `servicoId` | UUID | Sim |
+#### `GET /agendamentos/{agendamentoId}/pagamentos`
+Retorna o pagamento de um agendamento.
 
-**Response 200**
+---
+
+### Endpoints Públicos
+
+> Sem autenticação. Usados pela página web de agendamento do cliente.
+
+#### `GET /public/{tenantId}/servicos`
+Lista os serviços ativos da barbearia.
+
+#### `GET /public/{tenantId}/profissionais`
+Lista os profissionais ativos da barbearia.
+
+#### `GET /public/{tenantId}/slots?data=2026-04-10&servicoId={uuid}`
+Retorna os horários disponíveis para agendamento. Os slots são gerados automaticamente com base no horário de funcionamento e nos agendamentos já existentes. Retorna lista vazia se a barbearia estiver fechada no dia.
+
 ```json
 [
   { "horaInicio": "09:00", "horaFim": "09:30" },
@@ -425,18 +423,12 @@ Retorna os horários livres do dia baseado no horário de funcionamento da barbe
 ]
 ```
 
-> Retorna lista vazia se a barbearia estiver fechada no dia.
+#### `POST /public/{tenantId}/agendamentos`
+Cria um agendamento como cliente anônimo.
 
----
-
-### Criar agendamento (cliente anônimo)
-
-`POST /public/{tenantId}/agendamentos`
-
-**Body**
 ```json
 {
-  "servicoId": "2d816465-0814-46a4-9436-2b538492c8f0",
+  "servicoId": "uuid",
   "profissionalId": null,
   "clienteNome": "João Silva",
   "clienteTel": "21999990000",
@@ -447,34 +439,57 @@ Retorna os horários livres do dia baseado no horário de funcionamento da barbe
 }
 ```
 
-> O frontend deve preencher `horaFim` automaticamente somando `horaInicio + duracaoMin` do serviço selecionado.
+---
 
-**Respostas**
-| Status | Situação |
-|--------|----------|
-| 201 | Agendamento criado |
-| 400 | Horário inválido |
-| 404 | Barbearia ou serviço não encontrado |
-| 409 | Conflito de horário com profissional |
+## 🔄 Fluxo de Agendamento
+
+### Cliente via web
+```
+1. GET /public/{tenantId}/servicos       → escolhe o serviço
+2. GET /public/{tenantId}/profissionais  → escolhe o profissional (opcional)
+3. GET /public/{tenantId}/slots          → vê os horários disponíveis
+4. POST /public/{tenantId}/agendamentos  → confirma o agendamento
+```
+
+### Admin via app
+```
+1. GET  /agendamentos                    → visualiza agenda do dia
+2. POST /agendamentos                    → cria agendamento manualmente
+3. PATCH /agendamentos/{id}/status       → confirma ou conclui
+4. POST /agendamentos/{id}/pagamentos    → registra o pagamento
+```
 
 ---
 
-## Notas para o Frontend
+## 🏢 Multi-tenancy
 
-### Flutter (app do owner)
-- Autenticar via `POST /auth/login` e armazenar `accessToken` + `refreshToken`
-- Renovar token automaticamente via `POST /auth/refresh` quando receber 401
-- Passar `X-Tenant-ID` em todas as requisições (obtido do payload do JWT)
+Cada barbearia cadastrada recebe um `tenantId` (UUID) único. Todos os dados são isolados por esse ID — nenhum tenant consegue acessar dados de outro.
 
-### JavaScript (página pública do cliente)
-1. Carregar serviços via `GET /servicos` (ou endpoint público equivalente)
-2. Cliente seleciona serviço → armazenar `duracaoMin`
-3. Cliente seleciona data → chamar `GET /public/{tenantId}/slots?data=...&servicoId=...`
-4. Cliente seleciona slot → `horaInicio` e `horaFim` preenchidos automaticamente
-5. Submeter via `POST /public/{tenantId}/agendamentos`
+O isolamento é garantido em duas camadas:
 
-### Regras de negócio importantes
-- Agendamentos cancelados não travam horário — slot volta a ficar disponível
-- Profissional é sempre opcional no agendamento
-- Barbearia fechada no dia → nenhum slot retornado
-- Barbearia pode ter até dois turnos por dia (ex: 09:00–12:00 e 14:00–18:00)
+1. **JWT** — o `tenantId` é embutido no token no momento do login
+2. **Queries** — todos os repositórios filtram por `tenantId` via `TenantContextHolder`
+
+O link público da barbearia segue o formato:
+```
+https://nalamina.com.br/agendar/{tenantId}
+```
+
+---
+
+## 🗺 Roadmap
+
+- [x] Autenticação JWT com refresh token
+- [x] Multi-tenancy por tenant_id
+- [x] Gestão de serviços e profissionais
+- [x] Agendamentos com detecção de conflito
+- [x] Slots disponíveis baseados no horário de funcionamento
+- [x] Pagamentos com cálculo de taxa percentual
+- [x] Endpoints públicos para agendamento sem login
+- [ ] Integração Pagar.me (PIX gerado + webhook)
+- [ ] Notificações push (Firebase FCM)
+- [ ] Cupons de desconto
+- [ ] Programa de pontuação / fidelidade
+- [ ] Planos de assinatura para clientes
+- [ ] App Flutter (admin)
+- [ ] CI/CD com GitHub Actions
