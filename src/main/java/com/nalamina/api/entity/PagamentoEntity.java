@@ -40,6 +40,15 @@ public class PagamentoEntity {
     @Column(name = "pago_em")
     private LocalDateTime pagoEm;
 
+    @Column(name = "pagarme_charge_id", length = 255)
+    private String pagarmeChargeId;
+
+    @Column(name = "pix_copia_e_cola", columnDefinition = "TEXT")
+    private String pixCopiaECola;
+
+    @Column(name = "pix_expira_em")
+    private LocalDateTime pixExpiraEm;
+
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();

@@ -2,9 +2,11 @@ package com.nalamina.api.service;
 
 import com.nalamina.api.dto.pagamento.PagamentoRequest;
 import com.nalamina.api.dto.pagamento.PagamentoResponse;
+import com.nalamina.api.dto.pagamento.RelatorioFinanceiroResponse;
 import com.nalamina.api.entity.AgendamentoEntity;
 import com.nalamina.api.entity.PagamentoEntity;
 import com.nalamina.api.entity.TenantEntity;
+import com.nalamina.api.entity.enums.MetodoPagamento;
 import com.nalamina.api.entity.enums.StatusAgendamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
 import com.nalamina.api.repository.AgendamentoRepository;
@@ -19,8 +21,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +35,7 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
+    private final PagarmeService pagarmeService;
 
     private BigDecimal calcularTaxa(BigDecimal valorServico, BigDecimal taxaPct) {
         if (taxaPct == null || taxaPct.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
@@ -56,19 +63,26 @@ public class PagamentoService {
         BigDecimal valorTaxa = calcularTaxa(valorServico, taxaPct);
         BigDecimal valorTotal = valorServico.add(valorTaxa);
 
-        PagamentoEntity pagamento = PagamentoEntity.builder()
+        PagamentoEntity.PagamentoEntityBuilder builder = PagamentoEntity.builder()
                 .agendamentoEntity(agendamento)
                 .valor(valorTotal)
-                .metodo(request.getMetodo())
-                .status(StatusPagamento.PAGO)
-                .pagoEm(LocalDateTime.now())
-                .build();
+                .metodo(request.getMetodo());
 
-        pagamentoRepository.save(pagamento);
+        if (request.getMetodo() == MetodoPagamento.PIX) {
+            PagarmeService.PagarmePixResult pix = pagarmeService.criarCobrancaPix(
+                    agendamento.getClienteNome(), valorTotal, agendamentoId);
+            builder.status(StatusPagamento.PENDENTE)
+                   .pagarmeChargeId(pix.chargeId())
+                   .pixCopiaECola(pix.pixCopiaECola())
+                   .pixExpiraEm(pix.pixExpiraEm());
+        } else {
+            builder.status(StatusPagamento.PAGO)
+                   .pagoEm(LocalDateTime.now());
+            agendamento.setStatus(StatusAgendamento.CONCLUIDO);
+            agendamentoRepository.save(agendamento);
+        }
 
-        agendamento.setStatus(StatusAgendamento.CONCLUIDO);
-        agendamentoRepository.save(agendamento);
-
+        PagamentoEntity pagamento = pagamentoRepository.save(builder.build());
         return toResponse(pagamento, valorServico, taxaPct, valorTaxa, valorTotal);
     }
 
@@ -81,14 +95,83 @@ public class PagamentoService {
         PagamentoEntity pagamento = pagamentoRepository.findByAgendamentoEntity_Id(agendamentoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pagamento não encontrado"));
 
-        BigDecimal valorServico = pagamento.getAgendamentoEntity().getServicoEntity().getPreco();
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+
+        BigDecimal valorServico = pagamento.getAgendamentoEntity().getServicoEntity().getPreco();
         BigDecimal taxaPct = tenant.getTaxaAgendamentoPct();
         BigDecimal valorTaxa = calcularTaxa(valorServico, taxaPct);
         BigDecimal valorTotal = valorServico.add(valorTaxa);
 
         return toResponse(pagamento, valorServico, taxaPct, valorTaxa, valorTotal);
+    }
+
+    public List<PagamentoResponse> listar(LocalDate dataInicio, LocalDate dataFim) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        TenantEntity tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
+
+        return pagamentoRepository.findAllByTenant(tenantId, inicio, fim)
+                .stream()
+                .map(p -> {
+                    BigDecimal vs = p.getAgendamentoEntity().getServicoEntity().getPreco();
+                    BigDecimal taxa = tenant.getTaxaAgendamentoPct();
+                    BigDecimal vt = calcularTaxa(vs, taxa);
+                    return toResponse(p, vs, taxa, vt, vs.add(vt));
+                })
+                .collect(Collectors.toList());
+    }
+
+    public RelatorioFinanceiroResponse relatorio(LocalDate dataInicio, LocalDate dataFim) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
+
+        List<PagamentoEntity> pagamentos = pagamentoRepository.findAllByTenant(tenantId, inicio, fim)
+                .stream()
+                .filter(p -> p.getStatus() == StatusPagamento.PAGO)
+                .collect(Collectors.toList());
+
+        BigDecimal totalFaturado = pagamentos.stream()
+                .map(PagamentoEntity::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<MetodoPagamento, BigDecimal> porMetodo = pagamentos.stream()
+                .collect(Collectors.groupingBy(
+                        PagamentoEntity::getMetodo,
+                        Collectors.reducing(BigDecimal.ZERO, PagamentoEntity::getValor, BigDecimal::add)));
+
+        long quantidade = pagamentos.size();
+        BigDecimal ticketMedio = quantidade > 0
+                ? totalFaturado.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        return RelatorioFinanceiroResponse.builder()
+                .inicio(dataInicio)
+                .fim(dataFim)
+                .totalFaturado(totalFaturado)
+                .quantidadePagamentos(quantidade)
+                .ticketMedio(ticketMedio)
+                .porMetodo(porMetodo)
+                .build();
+    }
+
+    @Transactional
+    public void confirmarPagamento(String pagarmeChargeId) {
+        PagamentoEntity pagamento = pagamentoRepository.findByPagarmeChargeId(pagarmeChargeId)
+                .orElse(null);
+        if (pagamento == null || pagamento.getStatus() == StatusPagamento.PAGO) return;
+
+        pagamento.setStatus(StatusPagamento.PAGO);
+        pagamento.setPagoEm(LocalDateTime.now());
+        pagamentoRepository.save(pagamento);
+
+        AgendamentoEntity agendamento = pagamento.getAgendamentoEntity();
+        agendamento.setStatus(StatusAgendamento.CONCLUIDO);
+        agendamentoRepository.save(agendamento);
     }
 
     private PagamentoResponse toResponse(
@@ -97,7 +180,6 @@ public class PagamentoService {
             BigDecimal taxaPct,
             BigDecimal valorTaxa,
             BigDecimal valorTotal) {
-
         AgendamentoEntity a = p.getAgendamentoEntity();
         return PagamentoResponse.builder()
                 .id(p.getId())
@@ -112,6 +194,8 @@ public class PagamentoService {
                 .status(p.getStatus())
                 .pagoEm(p.getPagoEm())
                 .criadoEm(p.getCriadoEm())
+                .pixCopiaECola(p.getPixCopiaECola())
+                .pixExpiraEm(p.getPixExpiraEm())
                 .build();
     }
 }
