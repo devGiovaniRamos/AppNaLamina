@@ -24,4 +24,6 @@ public class PagamentoResponse {
     private StatusPagamento status;
     private LocalDateTime pagoEm;
     private LocalDateTime criadoEm;
+    private String pixCopiaECola;
+    private LocalDateTime pixExpiraEm;
 }
