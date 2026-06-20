@@ -7,6 +7,7 @@ import Servicos from './pages/Servicos';
 import Profissionais from './pages/Profissionais';
 import Pagamentos from './pages/Pagamentos';
 import Configuracoes from './pages/Configuracoes';
+import Cadastro from './pages/Cadastro';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -19,6 +20,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Cadastro />} />
           <Route
             path="/"
             element={

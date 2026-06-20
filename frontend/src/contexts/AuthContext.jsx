@@ -19,13 +19,18 @@ function getUserFromStorage() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getUserFromStorage);
 
-  const login = async (email, senha) => {
-    const data = await loginApi({ email, senha });
+  const login = async (email, senha, accessToken, refreshToken) => {
+    let data;
+    if (accessToken) {
+      data = { accessToken, refreshToken, nome: null };
+    } else {
+      data = await loginApi({ email, senha });
+    }
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('nome', data.nome);
+    if (data.nome) localStorage.setItem('nome', data.nome);
     const decoded = jwtDecode(data.accessToken);
-    setUser({ ...decoded, nome: data.nome });
+    setUser({ ...decoded, nome: data.nome || decoded.sub });
   };
 
   const logout = () => {
