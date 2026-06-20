@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,12 +45,17 @@ public class AgendamentoService {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
-        ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(request.getServicoId(), tenantId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
-
         if (!request.getHoraFim().isAfter(request.getHoraInicio())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Horário de fim deve ser após o início");
         }
+
+        LocalDateTime agendamentoDateTime = LocalDateTime.of(request.getData(), request.getHoraInicio());
+        if (agendamentoDateTime.isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível agendar em um horário que já passou");
+        }
+
+        ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(request.getServicoId(), tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
 
         ProfissionalEntity profissional = resolverProfissional(request.getProfissionalId(), tenantId);
 

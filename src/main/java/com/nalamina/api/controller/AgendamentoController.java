@@ -1,6 +1,7 @@
 package com.nalamina.api.controller;
 
 import com.nalamina.api.dto.agendamento.*;
+import com.nalamina.api.entity.enums.StatusAgendamento;
 import com.nalamina.api.service.AgendamentoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +46,12 @@ public class AgendamentoController {
     public ResponseEntity<Void> cancelar(@PathVariable UUID id) {
         agendamentoService.cancelar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/confirmar")
+    public ResponseEntity<AgendamentoResponse> confirmar(@PathVariable UUID id) {
+        AgendamentoStatusRequest request = new AgendamentoStatusRequest();
+        request.setStatus(StatusAgendamento.CONFIRMADO);
+        return ResponseEntity.ok(agendamentoService.atualizarStatus(id, request));
     }
 }

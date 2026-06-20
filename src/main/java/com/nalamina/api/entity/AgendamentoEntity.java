@@ -36,7 +36,7 @@ public class AgendamentoEntity {
     @Column(name = "cliente_nome", nullable = false, length = 100)
     private String clienteNome;
 
-    @Column(name = "cliente_tel", length = 20)
+    @Column(name = "cliente_tel", nullable = false, length = 20)
     private String clienteTel;
 
     @Column(nullable = false)

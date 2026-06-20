@@ -2,7 +2,6 @@ package com.nalamina.api.dto.agendamento;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -10,30 +9,27 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 @Data
-public class AgendamentoRequest {
+public class PublicAgendamentoRequest {
 
-    @NotNull
+    @NotBlank(message = "Nome do cliente é obrigatório")
+    private String clienteNome;
+
+    @NotBlank(message = "Telefone do cliente é obrigatório")
+    private String clienteTel;
+
+    @NotNull(message = "Serviço é obrigatório")
     private UUID servicoId;
 
     private UUID profissionalId;
 
-    @NotBlank
-    @Size(max = 100)
-    private String clienteNome;
-
-    @NotBlank
-    @Size(max = 20)
-    private String clienteTel;
-
-    @NotNull
+    @NotNull(message = "Data é obrigatória")
     private LocalDate data;
 
-    @NotNull
+    @NotNull(message = "Hora de início é obrigatória")
     private LocalTime horaInicio;
 
-    @NotNull
+    @NotNull(message = "Hora de fim é obrigatória")
     private LocalTime horaFim;
 
-    @Size(max = 500)
     private String observacao;
 }

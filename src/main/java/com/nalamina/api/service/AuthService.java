@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.text.Normalizer;
 import java.util.UUID;
 
 @Service
@@ -29,6 +30,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private String gerarSlug(String nome, UUID id) {
+        String normalizado = Normalizer.normalize(nome, Normalizer.Form.NFD)
+                .replaceAll("[^\\p{ASCII}]", "")
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+        return normalizado + "-" + id.toString().substring(0, 8);
+    }
 
     public LoginResponse login(LoginRequest request) {
         UsuarioEntity usuario = usuarioRepository
@@ -85,9 +95,12 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
         }
 
+        UUID tenantId = UUID.randomUUID();
         TenantEntity tenant = TenantEntity.builder()
+                .id(tenantId)
                 .nome(request.getNomeBarbearia())
                 .email(request.getEmail())
+                .slug(gerarSlug(request.getNomeBarbearia(), tenantId))
                 .ativo(true)
                 .build();
         tenantRepository.save(tenant);

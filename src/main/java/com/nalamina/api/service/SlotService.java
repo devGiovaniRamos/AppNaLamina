@@ -58,7 +58,8 @@ public class SlotService {
                     horario.getHoraInicio1(),
                     horario.getHoraFim1(),
                     duracaoMin,
-                    agendamentos));
+                    agendamentos,
+                    data));  // <-- passa data
         }
 
         if (horario.getHoraInicio2() != null && horario.getHoraFim2() != null) {
@@ -66,7 +67,8 @@ public class SlotService {
                     horario.getHoraInicio2(),
                     horario.getHoraFim2(),
                     duracaoMin,
-                    agendamentos));
+                    agendamentos,
+                    data));  // <-- passa data
         }
 
         return slots;
@@ -76,13 +78,23 @@ public class SlotService {
             LocalTime inicio,
             LocalTime fim,
             int duracaoMin,
-            List<AgendamentoEntity> agendamentos) {
+            List<AgendamentoEntity> agendamentos,
+            LocalDate data) {  // <-- adiciona data
 
         List<SlotDisponivel> slots = new ArrayList<>();
         LocalTime cursor = inicio;
 
+        // Só filtra por horário atual se for hoje
+        LocalTime agora = LocalDate.now().equals(data) ? LocalTime.now() : null;
+
         while (!cursor.plusMinutes(duracaoMin).isAfter(fim)) {
             LocalTime slotFim = cursor.plusMinutes(duracaoMin);
+
+            // Pula slots que já passaram (só verifica se for hoje)
+            if (agora != null && !cursor.isAfter(agora)) {
+                cursor = cursor.plusMinutes(duracaoMin);
+                continue;
+            }
 
             if (!temConflito(cursor, slotFim, agendamentos)) {
                 slots.add(SlotDisponivel.builder()

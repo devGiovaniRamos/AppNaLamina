@@ -54,4 +54,7 @@ public class TenantEntity {
 
     @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
     private java.math.BigDecimal taxaAgendamentoPct;
+
+    @Column(name= "slug", nullable = false, unique = true, length = 100)
+    private String slug;
 }
