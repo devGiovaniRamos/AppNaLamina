@@ -2,6 +2,7 @@ import api from './client';
 
 // Auth
 export const login = (data) => api.post('/auth/login', data).then(r => r.data);
+export const registro = (data) => api.post('/auth/registro', data).then(r => r.data);
 
 // Barbearia
 export const getBarbearia = () => api.get('/barbearia').then(r => r.data);

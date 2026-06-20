@@ -1,0 +1,3 @@
+ALTER TABLE pagamento ADD COLUMN IF NOT EXISTS pagarme_charge_id VARCHAR(255);
+ALTER TABLE pagamento ADD COLUMN IF NOT EXISTS pix_copia_e_cola TEXT;
+ALTER TABLE pagamento ADD COLUMN IF NOT EXISTS pix_expira_em TIMESTAMP;
