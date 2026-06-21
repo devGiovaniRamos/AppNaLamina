@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Calendar, CheckCircle2, XCircle, CreditCard, Clock } from 'lucide-react';
+import { Plus, Calendar, CheckCircle2, XCircle, CreditCard, Clock, CheckCheck } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
 
@@ -53,7 +53,7 @@ function slotOcupado(slot, agendamentos, profissionalId) {
   });
 }
 
-// — componente de grade de horários —
+// — grade de horários —
 
 function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect }) {
   if (slots === null) {
@@ -71,7 +71,6 @@ function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect })
       </div>
     );
   }
-
   return (
     <div className="flex flex-wrap gap-1.5">
       {slots.map(slot => {
@@ -101,6 +100,7 @@ function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect })
 
 export default function Agendamentos() {
   const [agendamentos, setAgendamentos] = useState([]);
+  const [pagamentosMap, setPagamentosMap] = useState({});
   const [servicos, setServicos] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
   const [barbearia, setBarbearia] = useState(null);
@@ -120,11 +120,15 @@ export default function Agendamentos() {
       api.listarServicos(),
       api.listarProfissionais(),
       api.getBarbearia(),
-    ]).then(([ags, svcs, profs, barb]) => {
+      api.listarPagamentos(),
+    ]).then(([ags, svcs, profs, barb, pags]) => {
       setAgendamentos(ags);
       setServicos(svcs);
       setProfissionais(profs);
       setBarbearia(barb);
+      const map = {};
+      pags.forEach(p => { map[p.agendamentoId] = p; });
+      setPagamentosMap(map);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -142,15 +146,10 @@ export default function Agendamentos() {
     return gerarSlots(horarioDia, servico.duracaoMin);
   }, [barbearia, form.servicoId, form.data, servicos]);
 
-  // agendamentos do dia selecionado no modal (para calcular ocupação)
   const agendamentosDoDia = useMemo(
     () => agendamentos.filter(a => a.data === form.data),
     [agendamentos, form.data]
   );
-
-  function handleSelectSlot(slot) {
-    setForm(prev => ({ ...prev, horaInicio: slot.inicio, horaFim: slot.fim }));
-  }
 
   async function handleStatus(id, status) {
     try {
@@ -175,7 +174,6 @@ export default function Agendamentos() {
     try {
       const novo = await api.criarAgendamento({
         ...form,
-        clienteTel: form.clienteTel || null,
         profissionalId: form.profissionalId || null,
         observacao: form.observacao || null,
       });
@@ -195,7 +193,7 @@ export default function Agendamentos() {
       if (metodo === 'PIX' && result.pixCopiaECola) {
         setPixData(result);
       } else {
-        setAgendamentos(prev => prev.map(a => a.id === modalPagamento.id ? { ...a, status: 'CONCLUIDO' } : a));
+        setPagamentosMap(prev => ({ ...prev, [result.agendamentoId]: result }));
         setModalPagamento(null);
       }
     } catch (err) {
@@ -209,12 +207,6 @@ export default function Agendamentos() {
     setMetodo('DINHEIRO');
   }
 
-  function abrirModalNovo() {
-    setForm(formVazio);
-    setError('');
-    setModalNovo(true);
-  }
-
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -222,7 +214,10 @@ export default function Agendamentos() {
           <h1 className="text-2xl font-bold text-slate-800">Agendamentos</h1>
           <p className="text-slate-500 text-sm mt-1">{filtrados.length} agendamento(s) no dia</p>
         </div>
-        <button onClick={abrirModalNovo} className="flex items-center gap-2 btn-primary">
+        <button
+          onClick={() => { setForm(formVazio); setError(''); setModalNovo(true); }}
+          className="flex items-center gap-2 btn-primary"
+        >
           <Plus size={16} /> Novo agendamento
         </button>
       </div>
@@ -239,47 +234,77 @@ export default function Agendamentos() {
         <div className="text-center py-16 text-slate-400">Nenhum agendamento neste dia</div>
       ) : (
         <div className="space-y-2">
-          {filtrados.map(ag => (
-            <div key={ag.id} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="text-center w-14">
-                  <p className="font-semibold text-slate-800 text-sm">{ag.horaInicio}</p>
-                  <p className="text-xs text-slate-400">{ag.horaFim}</p>
+          {filtrados.map(ag => {
+            const pag = pagamentosMap[ag.id];
+            const ativo = ag.status === 'PENDENTE' || ag.status === 'CONFIRMADO';
+            return (
+              <div key={ag.id} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="text-center w-14">
+                    <p className="font-semibold text-slate-800 text-sm">{ag.horaInicio}</p>
+                    <p className="text-xs text-slate-400">{ag.horaFim}</p>
+                  </div>
+                  <div className="h-10 w-px bg-slate-100" />
+                  <div>
+                    <p className="font-medium text-slate-800">{ag.clienteNome}</p>
+                    <p className="text-sm text-slate-500">
+                      {ag.servicoNome}{ag.profissionalNome ? ` · ${ag.profissionalNome}` : ''}
+                    </p>
+                    {ag.clienteTel && <p className="text-xs text-slate-400 mt-0.5">{ag.clienteTel}</p>}
+                  </div>
                 </div>
-                <div className="h-10 w-px bg-slate-100" />
-                <div>
-                  <p className="font-medium text-slate-800">{ag.clienteNome}</p>
-                  <p className="text-sm text-slate-500">
-                    {ag.servicoNome}{ag.profissionalNome ? ` · ${ag.profissionalNome}` : ''}
-                  </p>
-                  {ag.clienteTel && <p className="text-xs text-slate-400 mt-0.5">{ag.clienteTel}</p>}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLOR[ag.status]}`}>
-                  {STATUS_LABEL[ag.status]}
-                </span>
-                {ag.status === 'PENDENTE' && (
-                  <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Confirmar"
-                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                    <CheckCircle2 size={18} />
-                  </button>
-                )}
-                {(ag.status === 'PENDENTE' || ag.status === 'CONFIRMADO') && (
-                  <>
-                    <button onClick={() => { setModalPagamento(ag); setPixData(null); setMetodo('DINHEIRO'); }} title="Registrar pagamento"
-                      className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors">
+
+                <div className="flex items-center gap-2">
+                  {/* status do serviço */}
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLOR[ag.status]}`}>
+                    {STATUS_LABEL[ag.status]}
+                  </span>
+
+                  {/* status do pagamento */}
+                  {pag && (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${pag.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
+                      {pag.status === 'PAGO' ? 'Pago' : 'Pag. pendente'}
+                    </span>
+                  )}
+
+                  {/* confirmar PENDENTE → CONFIRMADO */}
+                  {ag.status === 'PENDENTE' && (
+                    <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Confirmar"
+                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                      <CheckCircle2 size={18} />
+                    </button>
+                  )}
+
+                  {/* concluir serviço */}
+                  {ativo && (
+                    <button onClick={() => handleStatus(ag.id, 'CONCLUIDO')} title="Concluir serviço"
+                      className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors">
+                      <CheckCheck size={18} />
+                    </button>
+                  )}
+
+                  {/* registrar pagamento (só se ainda não tem pagamento) */}
+                  {ativo && !pag && (
+                    <button
+                      onClick={() => { setModalPagamento(ag); setPixData(null); setMetodo('DINHEIRO'); }}
+                      title="Registrar pagamento"
+                      className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                    >
                       <CreditCard size={18} />
                     </button>
+                  )}
+
+                  {/* cancelar */}
+                  {ativo && (
                     <button onClick={() => handleCancelar(ag.id)} title="Cancelar"
                       className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                       <XCircle size={18} />
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -292,8 +317,13 @@ export default function Agendamentos() {
               <input className="input" required value={form.clienteNome} onChange={e => setForm({ ...form, clienteNome: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone</label>
-              <input className="input" value={form.clienteTel} onChange={e => setForm({ ...form, clienteTel: e.target.value })} />
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <input
+                className="input"
+                required
+                value={form.clienteTel}
+                onChange={e => setForm({ ...form, clienteTel: e.target.value })}
+              />
             </div>
           </div>
 
@@ -346,7 +376,7 @@ export default function Agendamentos() {
               selected={form.horaInicio}
               agendamentos={agendamentosDoDia}
               profissionalId={form.profissionalId || null}
-              onSelect={handleSelectSlot}
+              onSelect={slot => setForm(prev => ({ ...prev, horaInicio: slot.inicio, horaFim: slot.fim }))}
             />
           </div>
 
