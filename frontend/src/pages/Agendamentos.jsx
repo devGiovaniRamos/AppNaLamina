@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Calendar, CheckCircle2, XCircle, CreditCard } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Calendar, CheckCircle2, XCircle, CreditCard, Clock } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
 
@@ -12,13 +12,98 @@ const STATUS_COLOR = {
 };
 
 const hoje = new Date().toISOString().split('T')[0];
-
 const formVazio = { clienteNome: '', clienteTel: '', servicoId: '', profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
+
+// — helpers de slots —
+
+function timeToMin(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minToTime(min) {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+
+function gerarSlots(horarioDia, duracao) {
+  if (!horarioDia?.aberto || !duracao) return [];
+  const slots = [];
+  const turnos = [
+    { inicio: horarioDia.horaInicio1, fim: horarioDia.horaFim1 },
+    { inicio: horarioDia.horaInicio2, fim: horarioDia.horaFim2 },
+  ];
+  for (const { inicio, fim } of turnos) {
+    if (!inicio || !fim) continue;
+    const fimMin = timeToMin(fim);
+    let cur = timeToMin(inicio);
+    while (cur + duracao <= fimMin) {
+      slots.push({ inicio: minToTime(cur), fim: minToTime(cur + duracao) });
+      cur += duracao;
+    }
+  }
+  return slots;
+}
+
+function slotOcupado(slot, agendamentos, profissionalId) {
+  return agendamentos.some(ag => {
+    if (ag.status === 'CANCELADO') return false;
+    if (profissionalId && ag.profissionalId !== profissionalId) return false;
+    return ag.horaInicio < slot.fim && ag.horaFim > slot.inicio;
+  });
+}
+
+// — componente de grade de horários —
+
+function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect }) {
+  if (slots === null) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-50 rounded-lg p-3">
+        <Clock size={14} />
+        Selecione um serviço para ver os horários disponíveis
+      </div>
+    );
+  }
+  if (slots.length === 0) {
+    return (
+      <div className="text-sm text-slate-400 bg-slate-50 rounded-lg p-3">
+        Este dia não possui horários disponíveis
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {slots.map(slot => {
+        const ocupado = slotOcupado(slot, agendamentos, profissionalId);
+        const ativo = selected === slot.inicio;
+        return (
+          <button
+            key={slot.inicio}
+            type="button"
+            disabled={ocupado}
+            onClick={() => onSelect(slot)}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors
+              ${ocupado
+                ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                : ativo
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+              }`}
+          >
+            {slot.inicio}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Agendamentos() {
   const [agendamentos, setAgendamentos] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
+  const [barbearia, setBarbearia] = useState(null);
   const [dataFiltro, setDataFiltro] = useState(hoje);
   const [loading, setLoading] = useState(true);
   const [modalNovo, setModalNovo] = useState(false);
@@ -30,14 +115,42 @@ export default function Agendamentos() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([api.listarAgendamentos(), api.listarServicos(), api.listarProfissionais()])
-      .then(([ags, svcs, profs]) => { setAgendamentos(ags); setServicos(svcs); setProfissionais(profs); })
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.listarAgendamentos(),
+      api.listarServicos(),
+      api.listarProfissionais(),
+      api.getBarbearia(),
+    ]).then(([ags, svcs, profs, barb]) => {
+      setAgendamentos(ags);
+      setServicos(svcs);
+      setProfissionais(profs);
+      setBarbearia(barb);
+    }).finally(() => setLoading(false));
   }, []);
 
   const filtrados = agendamentos
     .filter(a => a.data === dataFiltro)
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+
+  // slots para o modal de novo agendamento
+  const slots = useMemo(() => {
+    if (!barbearia?.horarios || !form.servicoId) return null;
+    const servico = servicos.find(s => s.id === form.servicoId);
+    if (!servico) return null;
+    const diaSemana = new Date(form.data + 'T12:00:00').getDay();
+    const horarioDia = barbearia.horarios.find(h => h.diaSemana === diaSemana);
+    return gerarSlots(horarioDia, servico.duracaoMin);
+  }, [barbearia, form.servicoId, form.data, servicos]);
+
+  // agendamentos do dia selecionado no modal (para calcular ocupação)
+  const agendamentosDoDia = useMemo(
+    () => agendamentos.filter(a => a.data === form.data),
+    [agendamentos, form.data]
+  );
+
+  function handleSelectSlot(slot) {
+    setForm(prev => ({ ...prev, horaInicio: slot.inicio, horaFim: slot.fim }));
+  }
 
   async function handleStatus(id, status) {
     try {
@@ -56,6 +169,7 @@ export default function Agendamentos() {
 
   async function handleSalvar(e) {
     e.preventDefault();
+    if (!form.horaInicio) { setError('Selecione um horário disponível'); return; }
     setSaving(true);
     setError('');
     try {
@@ -90,6 +204,12 @@ export default function Agendamentos() {
     setMetodo('DINHEIRO');
   }
 
+  function abrirModalNovo() {
+    setForm(formVazio);
+    setError('');
+    setModalNovo(true);
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -97,7 +217,7 @@ export default function Agendamentos() {
           <h1 className="text-2xl font-bold text-slate-800">Agendamentos</h1>
           <p className="text-slate-500 text-sm mt-1">{filtrados.length} agendamento(s) no dia</p>
         </div>
-        <button onClick={() => { setForm(formVazio); setError(''); setModalNovo(true); }} className="flex items-center gap-2 btn-primary">
+        <button onClick={abrirModalNovo} className="flex items-center gap-2 btn-primary">
           <Plus size={16} /> Novo agendamento
         </button>
       </div>
@@ -171,40 +291,65 @@ export default function Agendamentos() {
               <input className="input" value={form.clienteTel} onChange={e => setForm({ ...form, clienteTel: e.target.value })} />
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Serviço *</label>
-              <select className="input" required value={form.servicoId} onChange={e => setForm({ ...form, servicoId: e.target.value })}>
+              <select
+                className="input"
+                required
+                value={form.servicoId}
+                onChange={e => setForm({ ...form, servicoId: e.target.value, horaInicio: '', horaFim: '' })}
+              >
                 <option value="">Selecione...</option>
-                {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                {servicos.map(s => <option key={s.id} value={s.id}>{s.nome} ({s.duracaoMin} min)</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Profissional</label>
-              <select className="input" value={form.profissionalId} onChange={e => setForm({ ...form, profissionalId: e.target.value })}>
+              <select
+                className="input"
+                value={form.profissionalId}
+                onChange={e => setForm({ ...form, profissionalId: e.target.value, horaInicio: '', horaFim: '' })}
+              >
                 <option value="">Qualquer</option>
                 {profissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Data *</label>
-              <input type="date" className="input" required value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Início *</label>
-              <input type="time" className="input" required value={form.horaInicio} onChange={e => setForm({ ...form, horaInicio: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Fim *</label>
-              <input type="time" className="input" required value={form.horaFim} onChange={e => setForm({ ...form, horaFim: e.target.value })} />
-            </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Data *</label>
+            <input
+              type="date"
+              className="input w-40"
+              required
+              value={form.data}
+              onChange={e => setForm({ ...form, data: e.target.value, horaInicio: '', horaFim: '' })}
+            />
           </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-2">
+              Horário disponível *
+              {form.horaInicio && (
+                <span className="ml-2 text-blue-600 font-semibold">{form.horaInicio} – {form.horaFim}</span>
+              )}
+            </label>
+            <SlotPicker
+              slots={slots}
+              selected={form.horaInicio}
+              agendamentos={agendamentosDoDia}
+              profissionalId={form.profissionalId || null}
+              onSelect={handleSelectSlot}
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Observação</label>
             <textarea className="input" rows={2} value={form.observacao} onChange={e => setForm({ ...form, observacao: e.target.value })} />
           </div>
+
           {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setModalNovo(false)} className="btn-ghost">Cancelar</button>
