@@ -120,7 +120,7 @@ export default function Agendamentos() {
       api.listarServicos(),
       api.listarProfissionais(),
       api.getBarbearia(),
-      api.listarPagamentos(),
+      api.listarPagamentos().catch(() => []),
     ]).then(([ags, svcs, profs, barb, pags]) => {
       setAgendamentos(ags);
       setServicos(svcs);
