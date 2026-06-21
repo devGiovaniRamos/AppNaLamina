@@ -86,6 +86,7 @@ public class PagamentoService {
         return toResponse(pagamento, valorServico, taxaPct, valorTaxa, valorTotal);
     }
 
+    @Transactional(readOnly = true)
     public PagamentoResponse buscarPorAgendamento(UUID agendamentoId) {
         UUID tenantId = TenantContextHolder.getTenantId();
 
@@ -106,6 +107,7 @@ public class PagamentoService {
         return toResponse(pagamento, valorServico, taxaPct, valorTaxa, valorTotal);
     }
 
+    @Transactional(readOnly = true)
     public List<PagamentoResponse> listar(LocalDate dataInicio, LocalDate dataFim) {
         UUID tenantId = TenantContextHolder.getTenantId();
         TenantEntity tenant = tenantRepository.findById(tenantId)
