@@ -23,6 +23,7 @@ public class ServicoService {
     private final ServicoRepository servicoRepository;
     private final TenantRepository tenantRepository;
 
+    @Transactional(readOnly = true)
     public List<ServicoResponse> listar() {
         UUID tenantId = TenantContextHolder.getTenantId();
         return servicoRepository.findByTenantEntity_IdAndAtivoTrue(tenantId)

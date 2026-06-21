@@ -23,6 +23,7 @@ public class ProfissionalService {
     private final ProfissionalRepository profissionalRepository;
     private final TenantRepository tenantRepository;
 
+    @Transactional(readOnly = true)
     public List<ProfissionalResponse> listar() {
         UUID tenantId = TenantContextHolder.getTenantId();
         return profissionalRepository.findByTenantEntity_IdAndAtivoTrue(tenantId)

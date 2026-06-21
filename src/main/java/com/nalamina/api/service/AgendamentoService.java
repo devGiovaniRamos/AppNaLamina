@@ -24,6 +24,7 @@ public class AgendamentoService {
     private final ServicoRepository servicoRepository;
     private final ProfissionalRepository profissionalRepository;
 
+    @Transactional(readOnly = true)
     public List<AgendamentoResponse> listar() {
         UUID tenantId = TenantContextHolder.getTenantId();
         return agendamentoRepository.findByTenantEntity_IdOrderByDataAscHoraInicioAsc(tenantId)
