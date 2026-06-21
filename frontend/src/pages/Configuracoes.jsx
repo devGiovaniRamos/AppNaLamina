@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Copy } from 'lucide-react';
 import * as api from '../api';
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -8,6 +9,7 @@ export default function Configuracoes() {
   const [loading, setLoading] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoHorario, setSalvandoHorario] = useState(null);
+  const [clonando, setClonando] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
 
@@ -51,6 +53,25 @@ export default function Configuracoes() {
       }));
     } catch { alert('Erro ao salvar horário'); }
     finally { setSalvandoHorario(null); }
+  }
+
+  async function handleClonarHorario(horario) {
+    if (!confirm(`Clonar o horário de ${DIAS[horario.diaSemana]} para todos os dias?`)) return;
+    setClonando(true);
+    try {
+      await api.atualizarTodosHorarios({
+        aberto: horario.aberto,
+        horaInicio1: horario.horaInicio1 || null,
+        horaFim1: horario.horaFim1 || null,
+        horaInicio2: horario.horaInicio2 || null,
+        horaFim2: horario.horaFim2 || null,
+      });
+      const data = await api.getBarbearia();
+      setBarbearia(data);
+      setSucesso('Horário clonado para todos os dias!');
+      setTimeout(() => setSucesso(''), 3000);
+    } catch { alert('Erro ao clonar horário'); }
+    finally { setClonando(false); }
   }
 
   if (loading) return <div className="p-6 text-center text-slate-400 py-16">Carregando...</div>;
@@ -103,15 +124,26 @@ export default function Configuracoes() {
 
       {/* Horários */}
       <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-        <h2 className="font-semibold text-slate-800 mb-4">Horário de Funcionamento</h2>
+        <h2 className="font-semibold text-slate-800 mb-1">Horário de Funcionamento</h2>
+        <p className="text-xs text-slate-400 mb-4">Use "Clonar para todos" para replicar o horário de um dia para a semana inteira.</p>
+        {sucesso && <p className="text-green-600 text-sm bg-green-50 p-2 rounded-lg mb-3">{sucesso}</p>}
         <div className="space-y-3">
           {[0, 1, 2, 3, 4, 5, 6].map(dia => {
             const h = horarios.find(x => x.diaSemana === dia) || {
               diaSemana: dia, aberto: false,
               horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: ''
             };
-            return <HorarioDia key={dia} horario={h} diaNome={DIAS[dia]}
-              onSalvar={handleSalvarHorario} saving={salvandoHorario === dia} />;
+            return (
+              <HorarioDia
+                key={dia}
+                horario={h}
+                diaNome={DIAS[dia]}
+                onSalvar={handleSalvarHorario}
+                onClonar={handleClonarHorario}
+                saving={salvandoHorario === dia}
+                clonando={clonando}
+              />
+            );
           })}
         </div>
       </section>
@@ -119,7 +151,7 @@ export default function Configuracoes() {
   );
 }
 
-function HorarioDia({ horario, diaNome, onSalvar, saving }) {
+function HorarioDia({ horario, diaNome, onSalvar, onClonar, saving, clonando }) {
   const [form, setForm] = useState({
     diaSemana: horario.diaSemana,
     aberto: horario.aberto ?? false,
@@ -128,41 +160,107 @@ function HorarioDia({ horario, diaNome, onSalvar, saving }) {
     horaInicio2: horario.horaInicio2 || '',
     horaFim2: horario.horaFim2 || '',
   });
+  const [erroHorario, setErroHorario] = useState('');
+
+  function validar() {
+    if (!form.aberto) { setErroHorario(''); return true; }
+
+    if (form.horaInicio1 && form.horaFim1 && form.horaFim1 <= form.horaInicio1) {
+      setErroHorario('Fim do 1º turno deve ser após o início');
+      return false;
+    }
+    if (form.horaInicio2 && form.horaFim1 && form.horaInicio2 < form.horaFim1) {
+      setErroHorario('Início do 2º turno deve ser após o fim do 1º turno');
+      return false;
+    }
+    if (form.horaInicio2 && form.horaFim2 && form.horaFim2 <= form.horaInicio2) {
+      setErroHorario('Fim do 2º turno deve ser após o início');
+      return false;
+    }
+    setErroHorario('');
+    return true;
+  }
+
+  function handleSalvar() {
+    if (validar()) onSalvar(form);
+  }
+
+  function handleClonar() {
+    if (validar()) onClonar(form);
+  }
+
+  function update(field, value) {
+    setForm(prev => ({ ...prev, [field]: value }));
+    setErroHorario('');
+  }
 
   return (
-    <div className="flex items-start gap-4 py-3 border-b border-slate-50 last:border-0">
-      <div className="w-24 flex items-center gap-2 pt-1">
-        <input type="checkbox" checked={form.aberto} onChange={e => setForm({ ...form, aberto: e.target.checked })}
-          className="rounded" />
-        <span className="text-sm font-medium text-slate-700">{diaNome}</span>
+    <div className="py-3 border-b border-slate-50 last:border-0">
+      <div className="flex items-start gap-4">
+        <div className="w-24 flex items-center gap-2 pt-1 shrink-0">
+          <input
+            type="checkbox"
+            checked={form.aberto}
+            onChange={e => update('aberto', e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm font-medium text-slate-700">{diaNome}</span>
+        </div>
+
+        {form.aberto ? (
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            <input type="time" value={form.horaInicio1} onChange={e => update('horaInicio1', e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            <span className="text-slate-400 text-sm">–</span>
+            <input type="time" value={form.horaFim1} onChange={e => update('horaFim1', e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            <span className="text-slate-300 text-sm mx-1">|</span>
+            <input type="time" value={form.horaInicio2} onChange={e => update('horaInicio2', e.target.value)}
+              placeholder="2º turno"
+              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            <span className="text-slate-400 text-sm">–</span>
+            <input type="time" value={form.horaFim2} onChange={e => update('horaFim2', e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            <div className="flex gap-1 ml-auto">
+              <button
+                onClick={handleClonar}
+                disabled={saving || clonando}
+                title="Clonar este horário para todos os dias"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors"
+              >
+                <Copy size={12} />
+                Clonar para todos
+              </button>
+              <button onClick={handleSalvar} disabled={saving}
+                className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {saving ? '...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-sm text-slate-400">Fechado</span>
+            <div className="flex gap-1 ml-auto">
+              <button
+                onClick={handleClonar}
+                disabled={saving || clonando}
+                title="Clonar fechado para todos os dias"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors"
+              >
+                <Copy size={12} />
+                Clonar para todos
+              </button>
+              <button onClick={handleSalvar} disabled={saving}
+                className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors">
+                {saving ? '...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {form.aberto ? (
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <input type="time" value={form.horaInicio1} onChange={e => setForm({ ...form, horaInicio1: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <span className="text-slate-400 text-sm">–</span>
-          <input type="time" value={form.horaFim1} onChange={e => setForm({ ...form, horaFim1: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <span className="text-slate-300 text-sm mx-1">|</span>
-          <input type="time" value={form.horaInicio2} onChange={e => setForm({ ...form, horaInicio2: e.target.value })}
-            placeholder="2º turno"
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <span className="text-slate-400 text-sm">–</span>
-          <input type="time" value={form.horaFim2} onChange={e => setForm({ ...form, horaFim2: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <button onClick={() => onSalvar(form)} disabled={saving}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors ml-auto">
-            {saving ? '...' : 'Salvar'}
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm text-slate-400">Fechado</span>
-          <button onClick={() => onSalvar({ ...form, aberto: false })} disabled={saving}
-            className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors ml-auto">
-            {saving ? '...' : 'Salvar'}
-          </button>
-        </div>
+
+      {erroHorario && (
+        <p className="text-red-500 text-xs mt-1.5 ml-28">{erroHorario}</p>
       )}
     </div>
   );
