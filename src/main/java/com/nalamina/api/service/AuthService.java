@@ -85,7 +85,9 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
         }
 
+        UUID tenantId = UUID.randomUUID();
         TenantEntity tenant = tenantRepository.save(TenantEntity.builder()
+                .id(tenantId)
                 .nome(request.getNomeBarbearia())
                 .email(request.getEmail())
                 .ativo(true)
@@ -101,8 +103,8 @@ public class AuthService {
                 .build();
         usuarioRepository.save(usuario);
 
-        String accessToken = jwtService.generateAccessToken(usuario.getId(), tenant.getId(), usuario.getRole().name());
-        String refreshToken = jwtService.generateRefreshToken(usuario.getId(), tenant.getId());
+        String accessToken = jwtService.generateAccessToken(usuario.getId(), tenantId, usuario.getRole().name());
+        String refreshToken = jwtService.generateRefreshToken(usuario.getId(), tenantId);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)

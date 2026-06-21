@@ -45,6 +45,9 @@ public class TenantEntity implements Persistable<UUID> {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 
+    @Column(unique = true, length = 100)
+    private String slug;
+
     @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
     private java.math.BigDecimal taxaAgendamentoPct;
 
