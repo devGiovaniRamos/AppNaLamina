@@ -85,7 +85,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
         }
 
-        TenantEntity tenant = tenantRepository.saveAndFlush(TenantEntity.builder()
+        TenantEntity tenant = tenantRepository.save(TenantEntity.builder()
                 .nome(request.getNomeBarbearia())
                 .email(request.getEmail())
                 .ativo(true)

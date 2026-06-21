@@ -1,10 +1,8 @@
 package com.nalamina.api.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,7 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "tenant")
-public class TenantEntity {
+public class TenantEntity implements Persistable<UUID> {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -47,11 +45,27 @@ public class TenantEntity {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 
+    @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
+    private java.math.BigDecimal taxaAgendamentoPct;
+
+    @Transient
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.id == null) this.id = UUID.randomUUID();
     }
-
-    @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
-    private java.math.BigDecimal taxaAgendamentoPct;
 }

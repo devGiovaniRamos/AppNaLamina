@@ -2,10 +2,8 @@ package com.nalamina.api.entity;
 
 import com.nalamina.api.entity.enums.RoleUsuario;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -19,7 +17,7 @@ import java.util.UUID;
         name = "usuario",
         uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "email"})
 )
-public class UsuarioEntity {
+public class UsuarioEntity implements Persistable<UUID> {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -52,6 +50,22 @@ public class UsuarioEntity {
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
+
+    @Transient
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
 
     @PrePersist
     public void prePersist() {
