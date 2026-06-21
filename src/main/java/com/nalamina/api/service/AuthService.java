@@ -96,14 +96,13 @@ public class AuthService {
         }
 
         UUID tenantId = UUID.randomUUID();
-        TenantEntity tenant = TenantEntity.builder()
+        TenantEntity tenant = tenantRepository.save(TenantEntity.builder()
                 .id(tenantId)
                 .nome(request.getNomeBarbearia())
                 .email(request.getEmail())
                 .slug(gerarSlug(request.getNomeBarbearia(), tenantId))
                 .ativo(true)
-                .build();
-        tenantRepository.save(tenant);
+                .build());
 
         UsuarioEntity usuario = UsuarioEntity.builder()
                 .tenantEntity(tenant)
@@ -115,8 +114,8 @@ public class AuthService {
                 .build();
         usuarioRepository.save(usuario);
 
-        String accessToken = jwtService.generateAccessToken(usuario.getId(), tenant.getId(), usuario.getRole().name());
-        String refreshToken = jwtService.generateRefreshToken(usuario.getId(), tenant.getId());
+        String accessToken = jwtService.generateAccessToken(usuario.getId(), tenantId, usuario.getRole().name());
+        String refreshToken = jwtService.generateRefreshToken(usuario.getId(), tenantId);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)

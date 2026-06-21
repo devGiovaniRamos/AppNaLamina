@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import * as api from '../api';
+import { registro } from '../api';
 
 export default function Cadastro() {
   const [form, setForm] = useState({ nome: '', nomeBarbearia: '', email: '', senha: '', confirmarSenha: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { setSession } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -23,16 +23,19 @@ export default function Cadastro() {
     setLoading(true);
     setError('');
     try {
-      const { accessToken, refreshToken } = await api.registro({
+      const data = await registro({
         nome: form.nome,
         nomeBarbearia: form.nomeBarbearia,
         email: form.email,
         senha: form.senha,
       });
-      login(null, null, accessToken, refreshToken);
+      setSession(data);
       navigate('/agendamentos');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao criar conta');
+      const msg = err.response?.data?.message
+        || err.response?.data?.error
+        || 'Erro ao criar conta. Tente novamente.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

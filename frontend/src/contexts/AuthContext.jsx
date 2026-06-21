@@ -10,7 +10,7 @@ function getUserFromStorage() {
     if (!token) return null;
     const decoded = jwtDecode(token);
     if (decoded.exp * 1000 < Date.now()) return null;
-    return { ...decoded, nome: localStorage.getItem('nome') };
+    return { ...decoded, nome: localStorage.getItem('nome') || decoded.sub };
   } catch {
     return null;
   }
@@ -19,18 +19,17 @@ function getUserFromStorage() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getUserFromStorage);
 
-  const login = async (email, senha, accessToken, refreshToken) => {
-    let data;
-    if (accessToken) {
-      data = { accessToken, refreshToken, nome: null };
-    } else {
-      data = await loginApi({ email, senha });
-    }
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    if (data.nome) localStorage.setItem('nome', data.nome);
-    const decoded = jwtDecode(data.accessToken);
-    setUser({ ...decoded, nome: data.nome || decoded.sub });
+  const setSession = ({ accessToken, refreshToken, nome }) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    if (nome) localStorage.setItem('nome', nome);
+    const decoded = jwtDecode(accessToken);
+    setUser({ ...decoded, nome: nome || decoded.sub });
+  };
+
+  const login = async (email, senha) => {
+    const data = await loginApi({ email, senha });
+    setSession(data);
   };
 
   const logout = () => {
@@ -39,7 +38,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, setSession, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
