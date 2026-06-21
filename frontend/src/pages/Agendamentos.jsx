@@ -173,7 +173,12 @@ export default function Agendamentos() {
     setSaving(true);
     setError('');
     try {
-      const novo = await api.criarAgendamento({ ...form, profissionalId: form.profissionalId || null, observacao: form.observacao || null });
+      const novo = await api.criarAgendamento({
+        ...form,
+        clienteTel: form.clienteTel || null,
+        profissionalId: form.profissionalId || null,
+        observacao: form.observacao || null,
+      });
       setAgendamentos(prev => [...prev, novo]);
       setModalNovo(false);
       setForm(formVazio);
