@@ -78,8 +78,6 @@ public class PagamentoService {
         } else {
             builder.status(StatusPagamento.PAGO)
                    .pagoEm(LocalDateTime.now());
-            agendamento.setStatus(StatusAgendamento.CONCLUIDO);
-            agendamentoRepository.save(agendamento);
         }
 
         PagamentoEntity pagamento = pagamentoRepository.save(builder.build());
@@ -186,6 +184,7 @@ public class PagamentoService {
         return PagamentoResponse.builder()
                 .id(p.getId())
                 .agendamentoId(a.getId())
+                .agendamentoData(a.getData())
                 .clienteNome(a.getClienteNome())
                 .servicoNome(a.getServicoEntity().getNome())
                 .valorServico(valorServico)

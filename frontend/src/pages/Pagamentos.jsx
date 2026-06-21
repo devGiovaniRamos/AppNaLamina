@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, CreditCard, DollarSign, Hash } from 'lucide-react';
+import { TrendingUp, CreditCard, DollarSign, Hash, RefreshCw } from 'lucide-react';
 import * as api from '../api';
 
 const METODO_LABEL = { PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO_CREDITO: 'Crédito', CARTAO_DEBITO: 'Débito' };
@@ -36,9 +36,15 @@ export default function Pagamentos() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Pagamentos</h1>
-        <p className="text-slate-500 text-sm mt-1">Histórico e relatório financeiro</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Pagamentos</h1>
+          <p className="text-slate-500 text-sm mt-1">Histórico e relatório financeiro · filtrado pela data de registro do pagamento</p>
+        </div>
+        <button onClick={carregar} disabled={loading} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          Atualizar
+        </button>
       </div>
 
       {/* Filtro de data */}
@@ -97,10 +103,11 @@ export default function Pagamentos() {
               <tr>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">Cliente</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">Serviço</th>
+                <th className="text-left px-4 py-3 text-slate-500 font-medium">Agendado</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">Método</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">Valor</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Data</th>
+                <th className="text-left px-4 py-3 text-slate-500 font-medium">Pago em</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -108,6 +115,7 @@ export default function Pagamentos() {
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-slate-800">{p.clienteNome}</td>
                   <td className="px-4 py-3 text-slate-600">{p.servicoNome}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{p.agendamentoData ? new Date(p.agendamentoData + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{METODO_LABEL[p.metodo] || p.metodo}</td>
                   <td className="px-4 py-3 font-medium text-slate-800">{fmt(p.valorTotal)}</td>
                   <td className="px-4 py-3">

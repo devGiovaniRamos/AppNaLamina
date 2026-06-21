@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Copy } from 'lucide-react';
 import * as api from '../api';
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -9,11 +8,12 @@ export default function Configuracoes() {
   const [loading, setLoading] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoHorario, setSalvandoHorario] = useState(null);
-  const [clonando, setClonando] = useState(false);
+  const [aplicando, setAplicando] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
 
   const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '' });
+  const [template, setTemplate] = useState({ horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: '' });
 
   useEffect(() => {
     api.getBarbearia().then(data => {
@@ -29,6 +29,11 @@ export default function Configuracoes() {
     }).finally(() => setLoading(false));
   }, []);
 
+  function mostrarSucesso(msg) {
+    setSucesso(msg);
+    setTimeout(() => setSucesso(''), 3000);
+  }
+
   async function handleSalvarPerfil(e) {
     e.preventDefault();
     setSalvandoPerfil(true);
@@ -36,8 +41,7 @@ export default function Configuracoes() {
     setSucesso('');
     try {
       await api.atualizarPerfil(perfil);
-      setSucesso('Perfil atualizado com sucesso!');
-      setTimeout(() => setSucesso(''), 3000);
+      mostrarSucesso('Perfil atualizado com sucesso!');
     } catch (err) {
       setErro(err.response?.data?.message || 'Erro ao salvar perfil');
     } finally { setSalvandoPerfil(false); }
@@ -49,29 +53,46 @@ export default function Configuracoes() {
       await api.atualizarHorario(horario);
       setBarbearia(prev => ({
         ...prev,
-        horarios: prev.horarios.map(h => h.diaSemana === horario.diaSemana ? { ...h, ...horario } : h),
+        horarios: prev.horarios
+          ? prev.horarios.map(h => h.diaSemana === horario.diaSemana ? { ...h, ...horario } : h)
+          : [horario],
       }));
     } catch { alert('Erro ao salvar horário'); }
     finally { setSalvandoHorario(null); }
   }
 
-  async function handleClonarHorario(horario) {
-    if (!confirm(`Clonar o horário de ${DIAS[horario.diaSemana]} para todos os dias?`)) return;
-    setClonando(true);
+  async function handleAplicarTemplate() {
+    const horarios = barbearia?.horarios || [];
+    const diasAbertos = horarios.filter(h => h.aberto);
+
+    if (diasAbertos.length === 0) {
+      alert('Nenhum dia está salvo como aberto. Marque e salve os dias desejados primeiro.');
+      return;
+    }
+    if (!template.horaInicio1 || !template.horaFim1) {
+      alert('Preencha ao menos o 1º turno (início e fim).');
+      return;
+    }
+
+    setAplicando(true);
     try {
-      await api.atualizarTodosHorarios({
-        aberto: horario.aberto,
-        horaInicio1: horario.horaInicio1 || null,
-        horaFim1: horario.horaFim1 || null,
-        horaInicio2: horario.horaInicio2 || null,
-        horaFim2: horario.horaFim2 || null,
-      });
+      await Promise.all(
+        diasAbertos.map(h =>
+          api.atualizarHorario({
+            diaSemana: h.diaSemana,
+            aberto: true,
+            horaInicio1: template.horaInicio1 || null,
+            horaFim1: template.horaFim1 || null,
+            horaInicio2: template.horaInicio2 || null,
+            horaFim2: template.horaFim2 || null,
+          })
+        )
+      );
       const data = await api.getBarbearia();
       setBarbearia(data);
-      setSucesso('Horário clonado para todos os dias!');
-      setTimeout(() => setSucesso(''), 3000);
-    } catch { alert('Erro ao clonar horário'); }
-    finally { setClonando(false); }
+      mostrarSucesso(`Horário aplicado para ${diasAbertos.length} dia(s) aberto(s)!`);
+    } catch { alert('Erro ao aplicar horário'); }
+    finally { setAplicando(false); }
   }
 
   if (loading) return <div className="p-6 text-center text-slate-400 py-16">Carregando...</div>;
@@ -81,6 +102,8 @@ export default function Configuracoes() {
   return (
     <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Configurações</h1>
+
+      {sucesso && <p className="text-green-600 text-sm bg-green-50 p-3 rounded-lg mb-4">{sucesso}</p>}
 
       {/* Perfil */}
       <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
@@ -112,7 +135,6 @@ export default function Configuracoes() {
             <label className="block text-xs font-medium text-slate-700 mb-1">Descrição</label>
             <textarea className="input" rows={3} value={perfil.descricao} onChange={e => setPerfil({ ...perfil, descricao: e.target.value })} />
           </div>
-          {sucesso && <p className="text-green-600 text-sm bg-green-50 p-2 rounded-lg">{sucesso}</p>}
           {erro && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{erro}</p>}
           <div className="flex justify-end">
             <button type="submit" disabled={salvandoPerfil} className="btn-primary">
@@ -122,12 +144,11 @@ export default function Configuracoes() {
         </form>
       </section>
 
-      {/* Horários */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+      {/* Horários por dia */}
+      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
         <h2 className="font-semibold text-slate-800 mb-1">Horário de Funcionamento</h2>
-        <p className="text-xs text-slate-400 mb-4">Use "Clonar para todos" para replicar o horário de um dia para a semana inteira.</p>
-        {sucesso && <p className="text-green-600 text-sm bg-green-50 p-2 rounded-lg mb-3">{sucesso}</p>}
-        <div className="space-y-3">
+        <p className="text-xs text-slate-400 mb-4">Configure cada dia individualmente e clique em Salvar.</p>
+        <div className="space-y-1">
           {[0, 1, 2, 3, 4, 5, 6].map(dia => {
             const h = horarios.find(x => x.diaSemana === dia) || {
               diaSemana: dia, aberto: false,
@@ -139,19 +160,54 @@ export default function Configuracoes() {
                 horario={h}
                 diaNome={DIAS[dia]}
                 onSalvar={handleSalvarHorario}
-                onClonar={handleClonarHorario}
                 saving={salvandoHorario === dia}
-                clonando={clonando}
               />
             );
           })}
+        </div>
+      </section>
+
+      {/* Template — clonar para dias abertos */}
+      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Replicar horário para dias abertos</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Defina um horário aqui e aplique de uma vez a todos os dias que estão salvos como abertos.
+        </p>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-slate-600 w-16">1º turno</span>
+          <input type="time" value={template.horaInicio1} onChange={e => setTemplate({ ...template, horaInicio1: e.target.value })}
+            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+          <span className="text-slate-400 text-sm">–</span>
+          <input type="time" value={template.horaFim1} onChange={e => setTemplate({ ...template, horaFim1: e.target.value })}
+            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-slate-600 w-16">2º turno</span>
+          <input type="time" value={template.horaInicio2} onChange={e => setTemplate({ ...template, horaInicio2: e.target.value })}
+            placeholder="opcional"
+            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+          <span className="text-slate-400 text-sm">–</span>
+          <input type="time" value={template.horaFim2} onChange={e => setTemplate({ ...template, horaFim2: e.target.value })}
+            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-slate-400">
+            Dias abertos salvos: {horarios.filter(h => h.aberto).map(h => DIAS[h.diaSemana]).join(', ') || 'nenhum'}
+          </p>
+          <button
+            onClick={handleAplicarTemplate}
+            disabled={aplicando}
+            className="btn-primary disabled:opacity-50"
+          >
+            {aplicando ? 'Aplicando...' : 'Aplicar para dias abertos'}
+          </button>
         </div>
       </section>
     </div>
   );
 }
 
-function HorarioDia({ horario, diaNome, onSalvar, onClonar, saving, clonando }) {
+function HorarioDia({ horario, diaNome, onSalvar, saving }) {
   const [form, setForm] = useState({
     diaSemana: horario.diaSemana,
     aberto: horario.aberto ?? false,
@@ -164,7 +220,6 @@ function HorarioDia({ horario, diaNome, onSalvar, onClonar, saving, clonando }) 
 
   function validar() {
     if (!form.aberto) { setErroHorario(''); return true; }
-
     if (form.horaInicio1 && form.horaFim1 && form.horaFim1 <= form.horaInicio1) {
       setErroHorario('Fim do 1º turno deve ser após o início');
       return false;
@@ -179,14 +234,6 @@ function HorarioDia({ horario, diaNome, onSalvar, onClonar, saving, clonando }) 
     }
     setErroHorario('');
     return true;
-  }
-
-  function handleSalvar() {
-    if (validar()) onSalvar(form);
-  }
-
-  function handleClonar() {
-    if (validar()) onClonar(form);
   }
 
   function update(field, value) {
@@ -216,45 +263,22 @@ function HorarioDia({ horario, diaNome, onSalvar, onClonar, saving, clonando }) 
               className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
             <span className="text-slate-300 text-sm mx-1">|</span>
             <input type="time" value={form.horaInicio2} onChange={e => update('horaInicio2', e.target.value)}
-              placeholder="2º turno"
               className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
             <span className="text-slate-400 text-sm">–</span>
             <input type="time" value={form.horaFim2} onChange={e => update('horaFim2', e.target.value)}
               className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-            <div className="flex gap-1 ml-auto">
-              <button
-                onClick={handleClonar}
-                disabled={saving || clonando}
-                title="Clonar este horário para todos os dias"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors"
-              >
-                <Copy size={12} />
-                Clonar para todos
-              </button>
-              <button onClick={handleSalvar} disabled={saving}
-                className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                {saving ? '...' : 'Salvar'}
-              </button>
-            </div>
+            <button onClick={() => validar() && onSalvar(form)} disabled={saving}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors ml-auto">
+              {saving ? '...' : 'Salvar'}
+            </button>
           </div>
         ) : (
           <div className="flex items-center gap-2 flex-1">
             <span className="text-sm text-slate-400">Fechado</span>
-            <div className="flex gap-1 ml-auto">
-              <button
-                onClick={handleClonar}
-                disabled={saving || clonando}
-                title="Clonar fechado para todos os dias"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors"
-              >
-                <Copy size={12} />
-                Clonar para todos
-              </button>
-              <button onClick={handleSalvar} disabled={saving}
-                className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors">
-                {saving ? '...' : 'Salvar'}
-              </button>
-            </div>
+            <button onClick={() => onSalvar({ ...form, aberto: false })} disabled={saving}
+              className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors ml-auto">
+              {saving ? '...' : 'Salvar'}
+            </button>
           </div>
         )}
       </div>
