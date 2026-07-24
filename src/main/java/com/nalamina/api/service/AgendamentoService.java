@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,8 +58,7 @@ public class AgendamentoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível agendar em um horário que já passou");
         }
 
-        ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(request.getServicoId(), tenantId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
+        List<ServicoEntity> servicos = resolverServicos(request.getServicoIds(), tenantId);
 
         ProfissionalEntity profissional = resolverProfissional(request.getProfissionalId(), tenantId);
 
@@ -68,7 +68,7 @@ public class AgendamentoService {
 
         AgendamentoEntity agendamento = AgendamentoEntity.builder()
                 .tenantEntity(tenant)
-                .servicoEntity(servico)
+                .servicos(servicos)
                 .profissionalEntity(profissional)
                 .clienteNome(request.getClienteNome())
                 .clienteTel(request.getClienteTel())
@@ -88,8 +88,7 @@ public class AgendamentoService {
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(id, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
-        ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(request.getServicoId(), tenantId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
+        List<ServicoEntity> servicos = resolverServicos(request.getServicoIds(), tenantId);
 
         if (!request.getHoraFim().isAfter(request.getHoraInicio())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Horário de fim deve ser após o início");
@@ -101,7 +100,8 @@ public class AgendamentoService {
             verificarConflito(profissional.getId(), request, id);
         }
 
-        agendamento.setServicoEntity(servico);
+        agendamento.getServicos().clear();
+        agendamento.getServicos().addAll(servicos);
         agendamento.setProfissionalEntity(profissional);
         agendamento.setClienteNome(request.getClienteNome());
         agendamento.setClienteTel(request.getClienteTel());
@@ -151,6 +151,13 @@ public class AgendamentoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profissional não encontrado"));
     }
 
+    private List<ServicoEntity> resolverServicos(List<UUID> servicoIds, UUID tenantId) {
+        return servicoIds.stream()
+                .map(servicoId -> servicoRepository.findByIdAndTenantEntity_Id(servicoId, tenantId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado")))
+                .toList();
+    }
+
     private void verificarConflito(UUID profissionalId, AgendamentoRequest request, UUID excludeId) {
         boolean conflito = agendamentoRepository.existeConflito(
                 profissionalId,
@@ -168,8 +175,8 @@ public class AgendamentoService {
     private AgendamentoResponse toResponse(AgendamentoEntity a) {
         return AgendamentoResponse.builder()
                 .id(a.getId())
-                .servicoId(a.getServicoEntity().getId())
-                .servicoNome(a.getServicoEntity().getNome())
+                .servicoIds(a.getServicos().stream().map(ServicoEntity::getId).toList())
+                .servicoNome(a.getServicos().stream().map(ServicoEntity::getNome).collect(Collectors.joining(", ")))
                 .profissionalId(a.getProfissionalEntity() != null ? a.getProfissionalEntity().getId() : null)
                 .profissionalNome(a.getProfissionalEntity() != null ? a.getProfissionalEntity().getNome() : null)
                 .clienteNome(a.getClienteNome())

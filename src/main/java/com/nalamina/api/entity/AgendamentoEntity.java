@@ -7,6 +7,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -29,9 +31,15 @@ public class AgendamentoEntity {
     @JoinColumn(name = "profissional_id")
     private ProfissionalEntity profissionalEntity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "servico_id", nullable = false)
-    private ServicoEntity servicoEntity;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "agendamento_servico",
+            joinColumns = @JoinColumn(name = "agendamento_id"),
+            inverseJoinColumns = @JoinColumn(name = "servico_id")
+    )
+    @OrderColumn(name = "posicao")
+    @Builder.Default
+    private List<ServicoEntity> servicos = new ArrayList<>();
 
     @Column(name = "cliente_nome", nullable = false, length = 100)
     private String clienteNome;

@@ -77,7 +77,7 @@ public class PublicController {
         AgendamentoRequest agendamentoRequest = new AgendamentoRequest();
         agendamentoRequest.setClienteNome(request.getClienteNome());
         agendamentoRequest.setClienteTel(request.getClienteTel());
-        agendamentoRequest.setServicoId(request.getServicoId());
+        agendamentoRequest.setServicoIds(List.of(request.getServicoId()));
         agendamentoRequest.setProfissionalId(request.getProfissionalId());
         agendamentoRequest.setData(request.getData());
         agendamentoRequest.setHoraInicio(request.getHoraInicio());

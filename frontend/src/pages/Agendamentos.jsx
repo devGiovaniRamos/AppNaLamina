@@ -12,7 +12,7 @@ const STATUS_COLOR = {
 };
 
 const hoje = new Date().toISOString().split('T')[0];
-const formVazio = { clienteNome: '', clienteTel: '', servicoId: '', profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
+const formVazio = { clienteNome: '', clienteTel: '', servicoIds: [], profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
 
 // — helpers de slots —
 
@@ -152,19 +152,26 @@ export default function Agendamentos() {
     .filter(a => a.data === dataFiltro)
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 
+  // duração total dos serviços selecionados (soma de todos)
+  const duracaoTotal = useMemo(
+    () => form.servicoIds.reduce((soma, id) => {
+      const servico = servicos.find(s => s.id === id);
+      return soma + (servico?.duracaoMin || 0);
+    }, 0),
+    [form.servicoIds, servicos]
+  );
+
   // slots para o modal de novo agendamento
   const slots = useMemo(() => {
-    if (!barbearia?.horarios || !form.servicoId) return null;
-    const servico = servicos.find(s => s.id === form.servicoId);
-    if (!servico) return null;
+    if (!barbearia?.horarios || form.servicoIds.length === 0 || duracaoTotal === 0) return null;
     const diaSemana = new Date(form.data + 'T12:00:00').getDay();
     const horarioDia = barbearia.horarios.find(h => h.diaSemana === diaSemana);
-    const todosSlots = gerarSlots(horarioDia, servico.duracaoMin);
+    const todosSlots = gerarSlots(horarioDia, duracaoTotal);
     if (form.data !== hoje) return todosSlots;
     const agora = new Date();
     const minutoAtual = agora.getHours() * 60 + agora.getMinutes();
     return todosSlots.filter(slot => timeToMin(slot.inicio) > minutoAtual);
-  }, [barbearia, form.servicoId, form.data, servicos]);
+  }, [barbearia, form.servicoIds, duracaoTotal, form.data]);
 
   const agendamentosDoDia = useMemo(
     () => agendamentos.filter(a => a.data === form.data),
@@ -205,8 +212,23 @@ export default function Agendamentos() {
     finally { setCancelando(false); }
   }
 
+  function toggleServico(servicoId) {
+    setForm(prev => {
+      const jaSelecionado = prev.servicoIds.includes(servicoId);
+      return {
+        ...prev,
+        servicoIds: jaSelecionado
+          ? prev.servicoIds.filter(id => id !== servicoId)
+          : [...prev.servicoIds, servicoId],
+        horaInicio: '',
+        horaFim: '',
+      };
+    });
+  }
+
   async function handleSalvar(e) {
     e.preventDefault();
+    if (form.servicoIds.length === 0) { setError('Selecione ao menos um serviço'); return; }
     if (!form.horaInicio) { setError('Selecione um horário disponível'); return; }
     setSaving(true);
     setError('');
@@ -395,16 +417,24 @@ export default function Agendamentos() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Serviço *</label>
-              <select
-                className="input"
-                required
-                value={form.servicoId}
-                onChange={e => setForm({ ...form, servicoId: e.target.value, horaInicio: '', horaFim: '' })}
-              >
-                <option value="">Selecione...</option>
-                {servicos.map(s => <option key={s.id} value={s.id}>{s.nome} ({s.duracaoMin} min)</option>)}
-              </select>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Serviços *
+                {form.servicoIds.length > 0 && (
+                  <span className="ml-1 font-normal text-blue-600">({duracaoTotal} min)</span>
+                )}
+              </label>
+              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                {servicos.map(s => {
+                  const selecionado = form.servicoIds.includes(s.id);
+                  return (
+                    <label key={s.id} className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50">
+                      <input type="checkbox" checked={selecionado} onChange={() => toggleServico(s.id)} className="rounded" />
+                      <span className="flex-1">{s.nome}</span>
+                      <span className="text-xs text-slate-400">{s.duracaoMin} min</span>
+                    </label>
+                  );
+                })}
+              </div>
               {!loading && servicos.length === 0 && (
                 <p className="text-xs text-red-500 mt-1">
                   {loadError ? 'Falha ao carregar serviços.' : 'Nenhum serviço cadastrado. Cadastre um em "Serviços" antes de criar um agendamento.'}

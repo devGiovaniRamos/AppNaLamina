@@ -7,13 +7,14 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
 @Builder
 public class AgendamentoResponse {
     private UUID id;
-    private UUID servicoId;
+    private List<UUID> servicoIds;
     private String servicoNome;
     private UUID profissionalId;
     private String profissionalNome;

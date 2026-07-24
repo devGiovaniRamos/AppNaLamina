@@ -20,9 +20,9 @@ public interface PagamentoRepository extends JpaRepository<PagamentoEntity, UUID
 
     Optional<PagamentoEntity> findByPagarmeChargeId(String pagarmeChargeId);
 
-    @Query("SELECT p FROM PagamentoEntity p " +
+    @Query("SELECT DISTINCT p FROM PagamentoEntity p " +
            "JOIN FETCH p.agendamentoEntity a " +
-           "JOIN FETCH a.servicoEntity " +
+           "JOIN FETCH a.servicos " +
            "WHERE a.tenantEntity.id = :tenantId " +
            "AND p.criadoEm >= :dataInicio " +
            "AND p.criadoEm < :dataFim " +
