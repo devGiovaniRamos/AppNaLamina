@@ -108,6 +108,7 @@ export default function Agendamentos() {
   const [loading, setLoading] = useState(true);
   const [modalNovo, setModalNovo] = useState(false);
   const [modalPagamento, setModalPagamento] = useState(null);
+  const [concluirComPagamento, setConcluirComPagamento] = useState(false);
   const [form, setForm] = useState(formVazio);
   const [metodo, setMetodo] = useState('DINHEIRO');
   const [pixData, setPixData] = useState(null);
@@ -210,6 +211,10 @@ export default function Agendamentos() {
         setPixData(result);
       } else {
         setPagamentosMap(prev => ({ ...prev, [result.agendamentoId]: result }));
+        if (concluirComPagamento) {
+          await api.atualizarStatus(modalPagamento.id, 'CONCLUIDO');
+          setAgendamentos(prev => prev.map(a => a.id === modalPagamento.id ? { ...a, status: 'CONCLUIDO' } : a));
+        }
         setModalPagamento(null);
       }
     } catch (err) {
@@ -219,6 +224,19 @@ export default function Agendamentos() {
 
   function fecharPagamento() {
     setModalPagamento(null);
+    setPixData(null);
+    setMetodo('DINHEIRO');
+    setConcluirComPagamento(false);
+  }
+
+  function handleConcluirClick(ag) {
+    const pag = pagamentosMap[ag.id];
+    if (pag && pag.status === 'PAGO') {
+      handleStatus(ag.id, 'CONCLUIDO');
+      return;
+    }
+    setModalPagamento(ag);
+    setConcluirComPagamento(true);
     setPixData(null);
     setMetodo('DINHEIRO');
   }
@@ -300,7 +318,7 @@ export default function Agendamentos() {
 
                   {/* concluir serviço */}
                   {ativo && (
-                    <button onClick={() => handleStatus(ag.id, 'CONCLUIDO')} title="Concluir serviço"
+                    <button onClick={() => handleConcluirClick(ag)} title="Concluir serviço"
                       className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors">
                       <CheckCheck size={18} />
                     </button>
@@ -309,7 +327,7 @@ export default function Agendamentos() {
                   {/* registrar pagamento (só se ainda não tem pagamento) */}
                   {ativo && !pag && (
                     <button
-                      onClick={() => { setModalPagamento(ag); setPixData(null); setMetodo('DINHEIRO'); }}
+                      onClick={() => { setModalPagamento(ag); setConcluirComPagamento(false); setPixData(null); setMetodo('DINHEIRO'); }}
                       title="Registrar pagamento"
                       className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
                     >
@@ -423,7 +441,7 @@ export default function Agendamentos() {
       </Modal>
 
       {/* Modal pagamento */}
-      <Modal open={!!modalPagamento} onClose={fecharPagamento} title="Registrar Pagamento">
+      <Modal open={!!modalPagamento} onClose={fecharPagamento} title={concluirComPagamento ? 'Concluir Atendimento' : 'Registrar Pagamento'}>
         {modalPagamento && !pixData && (
           <div className="space-y-4">
             <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
@@ -431,6 +449,11 @@ export default function Agendamentos() {
               <p><span className="font-medium">Serviço:</span> {modalPagamento.servicoNome}</p>
               <p><span className="font-medium">Horário:</span> {modalPagamento.horaInicio} – {modalPagamento.horaFim}</p>
             </div>
+            {concluirComPagamento && (
+              <p className="text-sm text-slate-600">
+                O pagamento deste serviço já foi efetuado? Confirme para concluir o atendimento, ou informe que o pagamento ainda está pendente para manter o agendamento como está.
+              </p>
+            )}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Método de pagamento</label>
               <select className="input" value={metodo} onChange={e => setMetodo(e.target.value)}>
@@ -441,9 +464,11 @@ export default function Agendamentos() {
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={fecharPagamento} className="btn-ghost">Cancelar</button>
+              <button onClick={fecharPagamento} className="btn-ghost">
+                {concluirComPagamento ? 'Pagamento ainda pendente' : 'Cancelar'}
+              </button>
               <button onClick={handlePagamento} disabled={saving} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                {saving ? 'Processando...' : 'Confirmar pagamento'}
+                {saving ? 'Processando...' : (concluirComPagamento ? 'Confirmar pagamento e concluir' : 'Confirmar pagamento')}
               </button>
             </div>
           </div>
