@@ -218,6 +218,17 @@ function HorarioDia({ horario, diaNome, onSalvar, saving }) {
   });
   const [erroHorario, setErroHorario] = useState('');
 
+  useEffect(() => {
+    setForm({
+      diaSemana: horario.diaSemana,
+      aberto: horario.aberto ?? false,
+      horaInicio1: horario.horaInicio1 || '',
+      horaFim1: horario.horaFim1 || '',
+      horaInicio2: horario.horaInicio2 || '',
+      horaFim2: horario.horaFim2 || '',
+    });
+  }, [horario.aberto, horario.horaInicio1, horario.horaFim1, horario.horaInicio2, horario.horaFim2]);
+
   function validar() {
     if (!form.aberto) { setErroHorario(''); return true; }
     if (form.horaInicio1 && form.horaFim1 && form.horaFim1 <= form.horaInicio1) {

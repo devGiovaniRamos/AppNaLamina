@@ -12,7 +12,7 @@ const STATUS_COLOR = {
 };
 
 const hoje = new Date().toISOString().split('T')[0];
-const formVazio = { clienteNome: '', clienteTel: '', servicoId: '', profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
+const formVazio = { clienteNome: '', clienteTel: '', servicoIds: [], profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
 
 // — helpers de slots —
 
@@ -108,6 +108,10 @@ export default function Agendamentos() {
   const [loading, setLoading] = useState(true);
   const [modalNovo, setModalNovo] = useState(false);
   const [modalPagamento, setModalPagamento] = useState(null);
+  const [concluirComPagamento, setConcluirComPagamento] = useState(false);
+  const [modalCancelar, setModalCancelar] = useState(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState('');
+  const [cancelando, setCancelando] = useState(false);
   const [form, setForm] = useState(formVazio);
   const [metodo, setMetodo] = useState('DINHEIRO');
   const [pixData, setPixData] = useState(null);
@@ -148,19 +152,26 @@ export default function Agendamentos() {
     .filter(a => a.data === dataFiltro)
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 
+  // duração total dos serviços selecionados (soma de todos)
+  const duracaoTotal = useMemo(
+    () => form.servicoIds.reduce((soma, id) => {
+      const servico = servicos.find(s => s.id === id);
+      return soma + (servico?.duracaoMin || 0);
+    }, 0),
+    [form.servicoIds, servicos]
+  );
+
   // slots para o modal de novo agendamento
   const slots = useMemo(() => {
-    if (!barbearia?.horarios || !form.servicoId) return null;
-    const servico = servicos.find(s => s.id === form.servicoId);
-    if (!servico) return null;
+    if (!barbearia?.horarios || form.servicoIds.length === 0 || duracaoTotal === 0) return null;
     const diaSemana = new Date(form.data + 'T12:00:00').getDay();
     const horarioDia = barbearia.horarios.find(h => h.diaSemana === diaSemana);
-    const todosSlots = gerarSlots(horarioDia, servico.duracaoMin);
+    const todosSlots = gerarSlots(horarioDia, duracaoTotal);
     if (form.data !== hoje) return todosSlots;
     const agora = new Date();
     const minutoAtual = agora.getHours() * 60 + agora.getMinutes();
     return todosSlots.filter(slot => timeToMin(slot.inicio) > minutoAtual);
-  }, [barbearia, form.servicoId, form.data, servicos]);
+  }, [barbearia, form.servicoIds, duracaoTotal, form.data]);
 
   const agendamentosDoDia = useMemo(
     () => agendamentos.filter(a => a.data === form.data),
@@ -174,16 +185,50 @@ export default function Agendamentos() {
     } catch { alert('Erro ao atualizar status'); }
   }
 
-  async function handleCancelar(id) {
-    if (!confirm('Cancelar este agendamento?')) return;
+  function abrirModalCancelar(ag) {
+    setModalCancelar(ag);
+    setMotivoCancelamento('');
+  }
+
+  function fecharModalCancelar() {
+    setModalCancelar(null);
+    setMotivoCancelamento('');
+  }
+
+  async function handleConfirmarCancelamento() {
+    if (!motivoCancelamento.trim()) return;
+    setCancelando(true);
     try {
-      await api.cancelarAgendamento(id);
-      setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status: 'CANCELADO' } : a));
+      await api.cancelarAgendamento(modalCancelar.id, motivoCancelamento.trim());
+      setAgendamentos(prev => prev.map(a => a.id === modalCancelar.id
+        ? { ...a, status: 'CANCELADO', motivoCancelamento: motivoCancelamento.trim() }
+        : a));
+      setPagamentosMap(prev => {
+        const { [modalCancelar.id]: _removido, ...resto } = prev;
+        return resto;
+      });
+      fecharModalCancelar();
     } catch { alert('Erro ao cancelar'); }
+    finally { setCancelando(false); }
+  }
+
+  function toggleServico(servicoId) {
+    setForm(prev => {
+      const jaSelecionado = prev.servicoIds.includes(servicoId);
+      return {
+        ...prev,
+        servicoIds: jaSelecionado
+          ? prev.servicoIds.filter(id => id !== servicoId)
+          : [...prev.servicoIds, servicoId],
+        horaInicio: '',
+        horaFim: '',
+      };
+    });
   }
 
   async function handleSalvar(e) {
     e.preventDefault();
+    if (form.servicoIds.length === 0) { setError('Selecione ao menos um serviço'); return; }
     if (!form.horaInicio) { setError('Selecione um horário disponível'); return; }
     setSaving(true);
     setError('');
@@ -210,6 +255,10 @@ export default function Agendamentos() {
         setPixData(result);
       } else {
         setPagamentosMap(prev => ({ ...prev, [result.agendamentoId]: result }));
+        if (concluirComPagamento) {
+          await api.atualizarStatus(modalPagamento.id, 'CONCLUIDO');
+          setAgendamentos(prev => prev.map(a => a.id === modalPagamento.id ? { ...a, status: 'CONCLUIDO' } : a));
+        }
         setModalPagamento(null);
       }
     } catch (err) {
@@ -219,6 +268,19 @@ export default function Agendamentos() {
 
   function fecharPagamento() {
     setModalPagamento(null);
+    setPixData(null);
+    setMetodo('DINHEIRO');
+    setConcluirComPagamento(false);
+  }
+
+  function handleConcluirClick(ag) {
+    const pag = pagamentosMap[ag.id];
+    if (pag && pag.status === 'PAGO') {
+      handleStatus(ag.id, 'CONCLUIDO');
+      return;
+    }
+    setModalPagamento(ag);
+    setConcluirComPagamento(true);
     setPixData(null);
     setMetodo('DINHEIRO');
   }
@@ -274,6 +336,9 @@ export default function Agendamentos() {
                       {ag.servicoNome}{ag.profissionalNome ? ` · ${ag.profissionalNome}` : ''}
                     </p>
                     {ag.clienteTel && <p className="text-xs text-slate-400 mt-0.5">{ag.clienteTel}</p>}
+                    {ag.status === 'CANCELADO' && ag.motivoCancelamento && (
+                      <p className="text-xs text-red-400 mt-0.5">Motivo: {ag.motivoCancelamento}</p>
+                    )}
                   </div>
                 </div>
 
@@ -290,26 +355,26 @@ export default function Agendamentos() {
                     </span>
                   )}
 
-                  {/* confirmar PENDENTE → CONFIRMADO */}
+                  {/* aceitar PENDENTE → CONFIRMADO */}
                   {ag.status === 'PENDENTE' && (
-                    <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Confirmar"
+                    <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Aceitar agendamento"
                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                       <CheckCircle2 size={18} />
                     </button>
                   )}
 
-                  {/* concluir serviço */}
-                  {ativo && (
-                    <button onClick={() => handleStatus(ag.id, 'CONCLUIDO')} title="Concluir serviço"
+                  {/* concluir serviço (só após o profissional confirmar o agendamento) */}
+                  {ag.status === 'CONFIRMADO' && (
+                    <button onClick={() => handleConcluirClick(ag)} title="Concluir serviço"
                       className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors">
                       <CheckCheck size={18} />
                     </button>
                   )}
 
-                  {/* registrar pagamento (só se ainda não tem pagamento) */}
-                  {ativo && !pag && (
+                  {/* registrar pagamento (só se ainda não tem pagamento, e já confirmado) */}
+                  {ag.status === 'CONFIRMADO' && !pag && (
                     <button
-                      onClick={() => { setModalPagamento(ag); setPixData(null); setMetodo('DINHEIRO'); }}
+                      onClick={() => { setModalPagamento(ag); setConcluirComPagamento(false); setPixData(null); setMetodo('DINHEIRO'); }}
                       title="Registrar pagamento"
                       className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
                     >
@@ -319,7 +384,7 @@ export default function Agendamentos() {
 
                   {/* cancelar */}
                   {ativo && (
-                    <button onClick={() => handleCancelar(ag.id)} title="Cancelar"
+                    <button onClick={() => abrirModalCancelar(ag)} title="Cancelar"
                       className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                       <XCircle size={18} />
                     </button>
@@ -352,16 +417,24 @@ export default function Agendamentos() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Serviço *</label>
-              <select
-                className="input"
-                required
-                value={form.servicoId}
-                onChange={e => setForm({ ...form, servicoId: e.target.value, horaInicio: '', horaFim: '' })}
-              >
-                <option value="">Selecione...</option>
-                {servicos.map(s => <option key={s.id} value={s.id}>{s.nome} ({s.duracaoMin} min)</option>)}
-              </select>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Serviços *
+                {form.servicoIds.length > 0 && (
+                  <span className="ml-1 font-normal text-blue-600">({duracaoTotal} min)</span>
+                )}
+              </label>
+              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                {servicos.map(s => {
+                  const selecionado = form.servicoIds.includes(s.id);
+                  return (
+                    <label key={s.id} className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50">
+                      <input type="checkbox" checked={selecionado} onChange={() => toggleServico(s.id)} className="rounded" />
+                      <span className="flex-1">{s.nome}</span>
+                      <span className="text-xs text-slate-400">{s.duracaoMin} min</span>
+                    </label>
+                  );
+                })}
+              </div>
               {!loading && servicos.length === 0 && (
                 <p className="text-xs text-red-500 mt-1">
                   {loadError ? 'Falha ao carregar serviços.' : 'Nenhum serviço cadastrado. Cadastre um em "Serviços" antes de criar um agendamento.'}
@@ -423,7 +496,7 @@ export default function Agendamentos() {
       </Modal>
 
       {/* Modal pagamento */}
-      <Modal open={!!modalPagamento} onClose={fecharPagamento} title="Registrar Pagamento">
+      <Modal open={!!modalPagamento} onClose={fecharPagamento} title={concluirComPagamento ? 'Concluir Atendimento' : 'Registrar Pagamento'}>
         {modalPagamento && !pixData && (
           <div className="space-y-4">
             <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
@@ -431,6 +504,11 @@ export default function Agendamentos() {
               <p><span className="font-medium">Serviço:</span> {modalPagamento.servicoNome}</p>
               <p><span className="font-medium">Horário:</span> {modalPagamento.horaInicio} – {modalPagamento.horaFim}</p>
             </div>
+            {concluirComPagamento && (
+              <p className="text-sm text-slate-600">
+                O pagamento deste serviço já foi efetuado? Confirme para concluir o atendimento, ou informe que o pagamento ainda está pendente para manter o agendamento como está.
+              </p>
+            )}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Método de pagamento</label>
               <select className="input" value={metodo} onChange={e => setMetodo(e.target.value)}>
@@ -441,9 +519,11 @@ export default function Agendamentos() {
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={fecharPagamento} className="btn-ghost">Cancelar</button>
+              <button onClick={fecharPagamento} className="btn-ghost">
+                {concluirComPagamento ? 'Pagamento ainda pendente' : 'Cancelar'}
+              </button>
               <button onClick={handlePagamento} disabled={saving} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                {saving ? 'Processando...' : 'Confirmar pagamento'}
+                {saving ? 'Processando...' : (concluirComPagamento ? 'Confirmar pagamento e concluir' : 'Confirmar pagamento')}
               </button>
             </div>
           </div>
@@ -462,6 +542,40 @@ export default function Agendamentos() {
             )}
             <div className="flex justify-end">
               <button onClick={fecharPagamento} className="btn-primary">Fechar</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal cancelamento */}
+      <Modal open={!!modalCancelar} onClose={fecharModalCancelar} title="Cancelar Agendamento">
+        {modalCancelar && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="font-medium">Cliente:</span> {modalCancelar.clienteNome}</p>
+              <p><span className="font-medium">Serviço:</span> {modalCancelar.servicoNome}</p>
+              <p><span className="font-medium">Horário:</span> {modalCancelar.horaInicio} – {modalCancelar.horaFim}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Motivo do cancelamento *</label>
+              <textarea
+                className="input"
+                rows={3}
+                autoFocus
+                value={motivoCancelamento}
+                onChange={e => setMotivoCancelamento(e.target.value)}
+                placeholder="Explique o motivo do cancelamento"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={fecharModalCancelar} className="btn-ghost">Voltar</button>
+              <button
+                onClick={handleConfirmarCancelamento}
+                disabled={cancelando || !motivoCancelamento.trim()}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelando ? 'Cancelando...' : 'Confirmar cancelamento'}
+              </button>
             </div>
           </div>
         )}

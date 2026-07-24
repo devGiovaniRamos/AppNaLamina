@@ -5,6 +5,7 @@ import com.nalamina.api.dto.pagamento.PagamentoResponse;
 import com.nalamina.api.dto.pagamento.RelatorioFinanceiroResponse;
 import com.nalamina.api.entity.AgendamentoEntity;
 import com.nalamina.api.entity.PagamentoEntity;
+import com.nalamina.api.entity.ServicoEntity;
 import com.nalamina.api.entity.TenantEntity;
 import com.nalamina.api.entity.enums.MetodoPagamento;
 import com.nalamina.api.entity.enums.StatusAgendamento;
@@ -47,6 +48,12 @@ public class PagamentoService {
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
+    private BigDecimal somarValorServicos(AgendamentoEntity agendamento) {
+        return agendamento.getServicos().stream()
+                .map(ServicoEntity::getPreco)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     @Transactional
     public PagamentoResponse registrar(UUID agendamentoId, PagamentoRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
@@ -61,7 +68,7 @@ public class PagamentoService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento já possui pagamento registrado");
         }
 
-        BigDecimal valorServico = agendamento.getServicoEntity().getPreco();
+        BigDecimal valorServico = somarValorServicos(agendamento);
         BigDecimal taxaPct = tenant.getTaxaAgendamentoPct();
         BigDecimal valorTaxa = calcularTaxa(valorServico, taxaPct);
         BigDecimal valorTotal = valorServico.add(valorTaxa);
@@ -100,7 +107,7 @@ public class PagamentoService {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
-        BigDecimal valorServico = pagamento.getAgendamentoEntity().getServicoEntity().getPreco();
+        BigDecimal valorServico = somarValorServicos(pagamento.getAgendamentoEntity());
         BigDecimal taxaPct = tenant.getTaxaAgendamentoPct();
         BigDecimal valorTaxa = calcularTaxa(valorServico, taxaPct);
         BigDecimal valorTotal = valorServico.add(valorTaxa);
@@ -120,7 +127,7 @@ public class PagamentoService {
         return pagamentoRepository.findAllByTenant(tenantId, inicio, fim)
                 .stream()
                 .map(p -> {
-                    BigDecimal vs = p.getAgendamentoEntity().getServicoEntity().getPreco();
+                    BigDecimal vs = somarValorServicos(p.getAgendamentoEntity());
                     BigDecimal taxa = tenant.getTaxaAgendamentoPct();
                     BigDecimal vt = calcularTaxa(vs, taxa);
                     return toResponse(p, vs, taxa, vt, vs.add(vt));
@@ -189,7 +196,7 @@ public class PagamentoService {
                 .agendamentoId(a.getId())
                 .agendamentoData(a.getData())
                 .clienteNome(a.getClienteNome())
-                .servicoNome(a.getServicoEntity().getNome())
+                .servicoNome(a.getServicos().stream().map(ServicoEntity::getNome).collect(Collectors.joining(", ")))
                 .valorServico(valorServico)
                 .taxaPct(taxaPct)
                 .valorTaxa(valorTaxa)

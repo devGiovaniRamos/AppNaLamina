@@ -15,7 +15,7 @@ export const listarAgendamentos = () => api.get('/agendamentos').then(r => r.dat
 export const criarAgendamento = (data) => api.post('/agendamentos', data).then(r => r.data);
 export const atualizarAgendamento = (id, data) => api.put(`/agendamentos/${id}`, data).then(r => r.data);
 export const atualizarStatus = (id, status) => api.patch(`/agendamentos/${id}/status`, { status }).then(r => r.data);
-export const cancelarAgendamento = (id) => api.delete(`/agendamentos/${id}`).then(r => r.data);
+export const cancelarAgendamento = (id, motivo) => api.delete(`/agendamentos/${id}`, { data: { motivo } }).then(r => r.data);
 
 // Serviços
 export const listarServicos = () => api.get('/servicos').then(r => r.data);
