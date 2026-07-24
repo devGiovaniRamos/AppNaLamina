@@ -316,16 +316,16 @@ export default function Agendamentos() {
                     </button>
                   )}
 
-                  {/* concluir serviço */}
-                  {ativo && (
+                  {/* concluir serviço (só após o profissional confirmar o agendamento) */}
+                  {ag.status === 'CONFIRMADO' && (
                     <button onClick={() => handleConcluirClick(ag)} title="Concluir serviço"
                       className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors">
                       <CheckCheck size={18} />
                     </button>
                   )}
 
-                  {/* registrar pagamento (só se ainda não tem pagamento) */}
-                  {ativo && !pag && (
+                  {/* registrar pagamento (só se ainda não tem pagamento, e já confirmado) */}
+                  {ag.status === 'CONFIRMADO' && !pag && (
                     <button
                       onClick={() => { setModalPagamento(ag); setConcluirComPagamento(false); setPixData(null); setMetodo('DINHEIRO'); }}
                       title="Registrar pagamento"
