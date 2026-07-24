@@ -34,3 +34,12 @@ export const listarPagamentos = (params) => api.get('/pagamentos', { params }).t
 export const relatorioPagamentos = (params) => api.get('/pagamentos/relatorio', { params }).then(r => r.data);
 export const registrarPagamento = (agendamentoId, data) => api.post(`/agendamentos/${agendamentoId}/pagamentos`, data).then(r => r.data);
 export const buscarPagamento = (agendamentoId) => api.get(`/agendamentos/${agendamentoId}/pagamentos`).then(r => r.data);
+
+// Estoque (produtos)
+export const listarProdutos = () => api.get('/produtos').then(r => r.data);
+export const criarProduto = (data) => api.post('/produtos', data).then(r => r.data);
+export const atualizarProduto = (id, data) => api.put(`/produtos/${id}`, data).then(r => r.data);
+export const desativarProduto = (id) => api.delete(`/produtos/${id}`).then(r => r.data);
+export const ajustarEstoque = (produtoId, data) => api.post(`/produtos/${produtoId}/estoque/ajuste`, data).then(r => r.data);
+export const listarMovimentosEstoque = (params) => api.get('/estoque/movimentos', { params }).then(r => r.data);
+export const relatorioEstoque = (params) => api.get('/estoque/relatorio', { params }).then(r => r.data);
