@@ -15,6 +15,8 @@ import java.util.UUID;
 public class ProdutoResponse {
     private UUID id;
     private String nome;
+    private String sku;
+    private String ean;
     private CategoriaProduto categoria;
     private TipoUsoProduto tipoUso;
     private UnidadeMedida unidadeMedida;

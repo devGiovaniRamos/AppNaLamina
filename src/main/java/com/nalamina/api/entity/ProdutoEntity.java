@@ -32,6 +32,12 @@ public class ProdutoEntity {
     @Column(nullable = false, length = 100)
     private String nome;
 
+    @Column(nullable = false, length = 30)
+    private String sku;
+
+    @Column(length = 14)
+    private String ean;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CategoriaProduto categoria;

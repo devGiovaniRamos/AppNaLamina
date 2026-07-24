@@ -17,6 +17,14 @@ public interface ProdutoRepository extends JpaRepository<ProdutoEntity, UUID> {
 
     Optional<ProdutoEntity> findByIdAndTenantEntity_Id(UUID id, UUID tenantId);
 
+    long countByTenantEntity_Id(UUID tenantId);
+
+    boolean existsByTenantEntity_IdAndSku(UUID tenantId, String sku);
+
+    boolean existsByTenantEntity_IdAndEan(UUID tenantId, String ean);
+
+    boolean existsByTenantEntity_IdAndEanAndIdNot(UUID tenantId, String ean, UUID id);
+
     @Query("""
     SELECT p FROM ProdutoEntity p
     WHERE p.tenantEntity.id = :tenantId

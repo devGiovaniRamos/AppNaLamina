@@ -7,7 +7,7 @@ const CATEGORIA_LABEL = { HIGIENE: 'Higiene', COSMETICO: 'Cosmético', EQUIPAMEN
 const TIPO_USO_LABEL = { REVENDA: 'Revenda', USO_INTERNO: 'Uso interno', AMBOS: 'Ambos' };
 const UNIDADE_LABEL = { UN: 'un', ML: 'ml', G: 'g', KG: 'kg', L: 'l' };
 
-const emptyForm = { nome: '', categoria: 'CONSUMIVEL', tipoUso: 'USO_INTERNO', unidadeMedida: 'UN', estoqueAtual: '', estoqueMinimo: '', precoVenda: '' };
+const emptyForm = { nome: '', ean: '', categoria: 'CONSUMIVEL', tipoUso: 'USO_INTERNO', unidadeMedida: 'UN', estoqueAtual: '', estoqueMinimo: '', precoVenda: '' };
 
 const hoje = new Date().toISOString().split('T')[0];
 const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -57,6 +57,7 @@ export default function Estoque() {
     setEditando(p);
     setForm({
       nome: p.nome,
+      ean: p.ean ?? '',
       categoria: p.categoria,
       tipoUso: p.tipoUso,
       unidadeMedida: p.unidadeMedida,
@@ -75,6 +76,7 @@ export default function Estoque() {
     try {
       const payload = {
         ...form,
+        ean: form.ean === '' ? null : form.ean,
         estoqueAtual: Number(form.estoqueAtual),
         estoqueMinimo: Number(form.estoqueMinimo),
         precoVenda: form.precoVenda === '' ? null : Number(form.precoVenda),
@@ -226,7 +228,12 @@ export default function Estoque() {
             <tbody className="divide-y divide-slate-50">
               {produtos.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-800">{p.nome}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-800">{p.nome}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      SKU: {p.sku}{p.ean ? ` · EAN: ${p.ean}` : ''}
+                    </p>
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{CATEGORIA_LABEL[p.categoria] || p.categoria}</td>
                   <td className="px-4 py-3 text-slate-600">{TIPO_USO_LABEL[p.tipoUso] || p.tipoUso}</td>
                   <td className="px-4 py-3">
@@ -267,9 +274,17 @@ export default function Estoque() {
       {/* Modal produto */}
       <Modal open={modal} onClose={() => setModal(false)} title={editando ? 'Editar Produto' : 'Novo Produto'}>
         <form onSubmit={handleSalvar} className="space-y-4">
+          {editando && (
+            <p className="text-xs text-slate-400">SKU: <span className="font-mono">{editando.sku}</span> (gerado automaticamente)</p>
+          )}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
             <input className="input" required value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">EAN (código de barras)</label>
+            <input className="input" placeholder="8, 12, 13 ou 14 dígitos" inputMode="numeric"
+              value={form.ean} onChange={e => setForm({ ...form, ean: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

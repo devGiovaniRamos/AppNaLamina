@@ -8,6 +8,7 @@ import com.nalamina.api.repository.ProdutoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +37,13 @@ public class ProdutoService {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
+        validarEanDisponivel(tenantId, request.getEan(), null);
+
         ProdutoEntity produto = ProdutoEntity.builder()
                 .tenantEntity(tenant)
                 .nome(request.getNome())
+                .sku(gerarProximoSku(tenantId))
+                .ean(request.getEan())
                 .categoria(request.getCategoria())
                 .tipoUso(request.getTipoUso())
                 .unidadeMedida(request.getUnidadeMedida())
@@ -47,7 +52,11 @@ public class ProdutoService {
                 .precoVenda(request.getPrecoVenda())
                 .build();
 
-        return toResponse(produtoRepository.save(produto));
+        try {
+            return toResponse(produtoRepository.saveAndFlush(produto));
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Conflito ao gerar identificadores do produto, tente novamente");
+        }
     }
 
     @Transactional
@@ -56,7 +65,10 @@ public class ProdutoService {
         ProdutoEntity produto = produtoRepository.findByIdAndTenantEntity_Id(id, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
 
+        validarEanDisponivel(tenantId, request.getEan(), id);
+
         produto.setNome(request.getNome());
+        produto.setEan(request.getEan());
         produto.setCategoria(request.getCategoria());
         produto.setTipoUso(request.getTipoUso());
         produto.setUnidadeMedida(request.getUnidadeMedida());
@@ -65,6 +77,26 @@ public class ProdutoService {
         produto.setPrecoVenda(request.getPrecoVenda());
 
         return toResponse(produtoRepository.save(produto));
+    }
+
+    private void validarEanDisponivel(UUID tenantId, String ean, UUID idAtual) {
+        if (ean == null) return;
+        boolean emUso = idAtual == null
+                ? produtoRepository.existsByTenantEntity_IdAndEan(tenantId, ean)
+                : produtoRepository.existsByTenantEntity_IdAndEanAndIdNot(tenantId, ean, idAtual);
+        if (emUso) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe um produto com esse EAN");
+        }
+    }
+
+    private String gerarProximoSku(UUID tenantId) {
+        long numero = produtoRepository.countByTenantEntity_Id(tenantId) + 1;
+        String sku = "PRD-" + String.format("%04d", numero);
+        while (produtoRepository.existsByTenantEntity_IdAndSku(tenantId, sku)) {
+            numero++;
+            sku = "PRD-" + String.format("%04d", numero);
+        }
+        return sku;
     }
 
     @Transactional
@@ -81,6 +113,8 @@ public class ProdutoService {
         return ProdutoResponse.builder()
                 .id(produto.getId())
                 .nome(produto.getNome())
+                .sku(produto.getSku())
+                .ean(produto.getEan())
                 .categoria(produto.getCategoria())
                 .tipoUso(produto.getTipoUso())
                 .unidadeMedida(produto.getUnidadeMedida())
