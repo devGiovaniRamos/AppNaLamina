@@ -56,6 +56,9 @@ public class AgendamentoEntity {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    @Column(name = "motivo_cancelamento", columnDefinition = "TEXT")
+    private String motivoCancelamento;
+
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();

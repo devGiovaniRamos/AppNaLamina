@@ -43,8 +43,10 @@ public class AgendamentoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelar(@PathVariable UUID id) {
-        agendamentoService.cancelar(id);
+    public ResponseEntity<Void> cancelar(
+            @PathVariable UUID id,
+            @RequestBody(required = false) AgendamentoCancelamentoRequest request) {
+        agendamentoService.cancelar(id, request != null ? request.getMotivo() : null);
         return ResponseEntity.noContent().build();
     }
 

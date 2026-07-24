@@ -123,13 +123,14 @@ public class AgendamentoService {
     }
 
     @Transactional
-    public void cancelar(UUID id) {
+    public void cancelar(UUID id, String motivo) {
         UUID tenantId = TenantContextHolder.getTenantId();
 
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(id, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
         agendamento.setStatus(StatusAgendamento.CANCELADO);
+        agendamento.setMotivoCancelamento(motivo);
         agendamentoRepository.save(agendamento);
     }
 
@@ -169,6 +170,7 @@ public class AgendamentoService {
                 .horaFim(a.getHoraFim())
                 .status(a.getStatus())
                 .observacao(a.getObservacao())
+                .motivoCancelamento(a.getMotivoCancelamento())
                 .criadoEm(a.getCriadoEm())
                 .build();
     }

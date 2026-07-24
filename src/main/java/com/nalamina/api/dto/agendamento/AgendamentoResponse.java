@@ -24,5 +24,6 @@ public class AgendamentoResponse {
     private LocalTime horaFim;
     private StatusAgendamento status;
     private String observacao;
+    private String motivoCancelamento;
     private LocalDateTime criadoEm;
 }

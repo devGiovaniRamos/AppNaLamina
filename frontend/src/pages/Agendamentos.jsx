@@ -109,6 +109,9 @@ export default function Agendamentos() {
   const [modalNovo, setModalNovo] = useState(false);
   const [modalPagamento, setModalPagamento] = useState(null);
   const [concluirComPagamento, setConcluirComPagamento] = useState(false);
+  const [modalCancelar, setModalCancelar] = useState(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState('');
+  const [cancelando, setCancelando] = useState(false);
   const [form, setForm] = useState(formVazio);
   const [metodo, setMetodo] = useState('DINHEIRO');
   const [pixData, setPixData] = useState(null);
@@ -175,12 +178,27 @@ export default function Agendamentos() {
     } catch { alert('Erro ao atualizar status'); }
   }
 
-  async function handleCancelar(id) {
-    if (!confirm('Cancelar este agendamento?')) return;
+  function abrirModalCancelar(ag) {
+    setModalCancelar(ag);
+    setMotivoCancelamento('');
+  }
+
+  function fecharModalCancelar() {
+    setModalCancelar(null);
+    setMotivoCancelamento('');
+  }
+
+  async function handleConfirmarCancelamento() {
+    if (!motivoCancelamento.trim()) return;
+    setCancelando(true);
     try {
-      await api.cancelarAgendamento(id);
-      setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status: 'CANCELADO' } : a));
+      await api.cancelarAgendamento(modalCancelar.id, motivoCancelamento.trim());
+      setAgendamentos(prev => prev.map(a => a.id === modalCancelar.id
+        ? { ...a, status: 'CANCELADO', motivoCancelamento: motivoCancelamento.trim() }
+        : a));
+      fecharModalCancelar();
     } catch { alert('Erro ao cancelar'); }
+    finally { setCancelando(false); }
   }
 
   async function handleSalvar(e) {
@@ -292,6 +310,9 @@ export default function Agendamentos() {
                       {ag.servicoNome}{ag.profissionalNome ? ` · ${ag.profissionalNome}` : ''}
                     </p>
                     {ag.clienteTel && <p className="text-xs text-slate-400 mt-0.5">{ag.clienteTel}</p>}
+                    {ag.status === 'CANCELADO' && ag.motivoCancelamento && (
+                      <p className="text-xs text-red-400 mt-0.5">Motivo: {ag.motivoCancelamento}</p>
+                    )}
                   </div>
                 </div>
 
@@ -308,9 +329,9 @@ export default function Agendamentos() {
                     </span>
                   )}
 
-                  {/* confirmar PENDENTE → CONFIRMADO */}
+                  {/* aceitar PENDENTE → CONFIRMADO */}
                   {ag.status === 'PENDENTE' && (
-                    <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Confirmar"
+                    <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Aceitar agendamento"
                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                       <CheckCircle2 size={18} />
                     </button>
@@ -337,7 +358,7 @@ export default function Agendamentos() {
 
                   {/* cancelar */}
                   {ativo && (
-                    <button onClick={() => handleCancelar(ag.id)} title="Cancelar"
+                    <button onClick={() => abrirModalCancelar(ag)} title="Cancelar"
                       className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                       <XCircle size={18} />
                     </button>
@@ -487,6 +508,40 @@ export default function Agendamentos() {
             )}
             <div className="flex justify-end">
               <button onClick={fecharPagamento} className="btn-primary">Fechar</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal cancelamento */}
+      <Modal open={!!modalCancelar} onClose={fecharModalCancelar} title="Cancelar Agendamento">
+        {modalCancelar && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="font-medium">Cliente:</span> {modalCancelar.clienteNome}</p>
+              <p><span className="font-medium">Serviço:</span> {modalCancelar.servicoNome}</p>
+              <p><span className="font-medium">Horário:</span> {modalCancelar.horaInicio} – {modalCancelar.horaFim}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Motivo do cancelamento *</label>
+              <textarea
+                className="input"
+                rows={3}
+                autoFocus
+                value={motivoCancelamento}
+                onChange={e => setMotivoCancelamento(e.target.value)}
+                placeholder="Explique o motivo do cancelamento"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={fecharModalCancelar} className="btn-ghost">Voltar</button>
+              <button
+                onClick={handleConfirmarCancelamento}
+                disabled={cancelando || !motivoCancelamento.trim()}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelando ? 'Cancelando...' : 'Confirmar cancelamento'}
+              </button>
             </div>
           </div>
         )}
