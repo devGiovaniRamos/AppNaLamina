@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, Scissors, Users, CreditCard, Boxes, Settings, LogOut } from 'lucide-react';
+import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Settings, LogOut } from 'lucide-react';
 
 const navItems = [
   { to: '/agendamentos', icon: Calendar, label: 'Agendamentos' },
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/profissionais', icon: Users, label: 'Profissionais' },
   { to: '/pagamentos', icon: CreditCard, label: 'Pagamentos' },
   { to: '/estoque', icon: Boxes, label: 'Estoque' },
+  { to: '/venda', icon: ShoppingCart, label: 'Venda' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 

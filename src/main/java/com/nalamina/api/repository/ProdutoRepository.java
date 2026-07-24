@@ -32,4 +32,15 @@ public interface ProdutoRepository extends JpaRepository<ProdutoEntity, UUID> {
       AND p.estoqueAtual <= p.estoqueMinimo
     """)
     List<ProdutoEntity> findComEstoqueBaixo(@Param("tenantId") UUID tenantId);
+
+    @Query("""
+    SELECT p FROM ProdutoEntity p
+    WHERE p.tenantEntity.id = :tenantId
+      AND p.ativo = true
+      AND (LOWER(p.nome) LIKE LOWER(CONCAT('%', :q, '%'))
+        OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :q, '%'))
+        OR p.ean LIKE CONCAT('%', :q, '%'))
+    ORDER BY p.nome
+    """)
+    List<ProdutoEntity> buscar(@Param("tenantId") UUID tenantId, @Param("q") String q);
 }

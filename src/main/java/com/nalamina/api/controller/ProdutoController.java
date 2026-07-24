@@ -22,8 +22,8 @@ public class ProdutoController {
     private final EstoqueService estoqueService;
 
     @GetMapping
-    public ResponseEntity<List<ProdutoResponse>> listar() {
-        return ResponseEntity.ok(produtoService.listar());
+    public ResponseEntity<List<ProdutoResponse>> listar(@RequestParam(required = false) String q) {
+        return ResponseEntity.ok(produtoService.listar(q));
     }
 
     @PostMapping

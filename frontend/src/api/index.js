@@ -36,10 +36,16 @@ export const registrarPagamento = (agendamentoId, data) => api.post(`/agendament
 export const buscarPagamento = (agendamentoId) => api.get(`/agendamentos/${agendamentoId}/pagamentos`).then(r => r.data);
 
 // Estoque (produtos)
-export const listarProdutos = () => api.get('/produtos').then(r => r.data);
+export const listarProdutos = (q) => api.get('/produtos', { params: q ? { q } : {} }).then(r => r.data);
 export const criarProduto = (data) => api.post('/produtos', data).then(r => r.data);
 export const atualizarProduto = (id, data) => api.put(`/produtos/${id}`, data).then(r => r.data);
 export const desativarProduto = (id) => api.delete(`/produtos/${id}`).then(r => r.data);
 export const ajustarEstoque = (produtoId, data) => api.post(`/produtos/${produtoId}/estoque/ajuste`, data).then(r => r.data);
 export const listarMovimentosEstoque = (params) => api.get('/estoque/movimentos', { params }).then(r => r.data);
 export const relatorioEstoque = (params) => api.get('/estoque/relatorio', { params }).then(r => r.data);
+
+// Vendas (PDV)
+export const listarVendas = (params) => api.get('/vendas', { params }).then(r => r.data);
+export const buscarVenda = (id) => api.get(`/vendas/${id}`).then(r => r.data);
+export const criarVenda = (data) => api.post('/vendas', data).then(r => r.data);
+export const cancelarVenda = (id, motivo) => api.delete(`/vendas/${id}`, { data: { motivo } }).then(r => r.data);

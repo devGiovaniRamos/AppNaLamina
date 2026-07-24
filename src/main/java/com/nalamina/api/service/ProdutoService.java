@@ -25,10 +25,12 @@ public class ProdutoService {
     private final TenantRepository tenantRepository;
 
     @Transactional(readOnly = true)
-    public List<ProdutoResponse> listar() {
+    public List<ProdutoResponse> listar(String q) {
         UUID tenantId = TenantContextHolder.getTenantId();
-        return produtoRepository.findByTenantEntity_IdAndAtivoTrue(tenantId)
-                .stream().map(this::toResponse).toList();
+        List<ProdutoEntity> produtos = (q == null || q.isBlank())
+                ? produtoRepository.findByTenantEntity_IdAndAtivoTrue(tenantId)
+                : produtoRepository.buscar(tenantId, q.trim());
+        return produtos.stream().map(this::toResponse).toList();
     }
 
     @Transactional
