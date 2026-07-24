@@ -24,8 +24,8 @@ public interface PagamentoRepository extends JpaRepository<PagamentoEntity, UUID
            "JOIN FETCH p.agendamentoEntity a " +
            "JOIN FETCH a.servicoEntity " +
            "WHERE a.tenantEntity.id = :tenantId " +
-           "AND (:dataInicio IS NULL OR p.criadoEm >= :dataInicio) " +
-           "AND (:dataFim IS NULL OR p.criadoEm < :dataFim) " +
+           "AND p.criadoEm >= :dataInicio " +
+           "AND p.criadoEm < :dataFim " +
            "ORDER BY p.criadoEm DESC")
     List<PagamentoEntity> findAllByTenant(
             @Param("tenantId") UUID tenantId,

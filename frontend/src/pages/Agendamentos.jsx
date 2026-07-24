@@ -155,7 +155,11 @@ export default function Agendamentos() {
     if (!servico) return null;
     const diaSemana = new Date(form.data + 'T12:00:00').getDay();
     const horarioDia = barbearia.horarios.find(h => h.diaSemana === diaSemana);
-    return gerarSlots(horarioDia, servico.duracaoMin);
+    const todosSlots = gerarSlots(horarioDia, servico.duracaoMin);
+    if (form.data !== hoje) return todosSlots;
+    const agora = new Date();
+    const minutoAtual = agora.getHours() * 60 + agora.getMinutes();
+    return todosSlots.filter(slot => timeToMin(slot.inicio) > minutoAtual);
   }, [barbearia, form.servicoId, form.data, servicos]);
 
   const agendamentosDoDia = useMemo(
@@ -383,6 +387,7 @@ export default function Agendamentos() {
               type="date"
               className="input w-40"
               required
+              min={hoje}
               value={form.data}
               onChange={e => setForm({ ...form, data: e.target.value, horaInicio: '', horaFim: '' })}
             />
