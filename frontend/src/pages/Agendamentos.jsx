@@ -113,24 +113,36 @@ export default function Agendamentos() {
   const [pixData, setPixData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  function carregarDados() {
+    setLoading(true);
+    setLoadError(false);
+    Promise.allSettled([
       api.listarAgendamentos(),
       api.listarServicos(),
       api.listarProfissionais(),
       api.getBarbearia(),
       api.listarPagamentos(),
     ]).then(([ags, svcs, profs, barb, pags]) => {
-      setAgendamentos(ags);
-      setServicos(svcs);
-      setProfissionais(profs);
-      setBarbearia(barb);
-      const map = {};
-      pags.forEach(p => { map[p.agendamentoId] = p; });
-      setPagamentosMap(map);
+      if (ags.status === 'fulfilled') setAgendamentos(ags.value);
+      if (svcs.status === 'fulfilled') setServicos(svcs.value);
+      if (profs.status === 'fulfilled') setProfissionais(profs.value);
+      if (barb.status === 'fulfilled') setBarbearia(barb.value);
+      if (pags.status === 'fulfilled') {
+        const map = {};
+        pags.value.forEach(p => { map[p.agendamentoId] = p; });
+        setPagamentosMap(map);
+      }
+      const falhas = [ags, svcs, profs, barb, pags].filter(r => r.status === 'rejected');
+      if (falhas.length > 0) {
+        console.error('Falha ao carregar dados de agendamentos', falhas.map(f => f.reason));
+        setLoadError(true);
+      }
     }).finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { carregarDados(); }, []);
 
   const filtrados = agendamentos
     .filter(a => a.data === dataFiltro)
@@ -221,6 +233,13 @@ export default function Agendamentos() {
           <Plus size={16} /> Novo agendamento
         </button>
       </div>
+
+      {loadError && (
+        <div className="flex items-center justify-between gap-3 mb-5 bg-red-50 border border-red-100 text-red-700 text-sm rounded-lg px-4 py-2.5">
+          <span>Não foi possível carregar todos os dados (agendamentos, serviços, profissionais ou pagamentos). Alguns campos podem aparecer vazios.</span>
+          <button onClick={carregarDados} className="font-medium underline shrink-0">Tentar novamente</button>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mb-5">
         <Calendar size={16} className="text-slate-400" />
@@ -339,6 +358,11 @@ export default function Agendamentos() {
                 <option value="">Selecione...</option>
                 {servicos.map(s => <option key={s.id} value={s.id}>{s.nome} ({s.duracaoMin} min)</option>)}
               </select>
+              {!loading && servicos.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  {loadError ? 'Falha ao carregar serviços.' : 'Nenhum serviço cadastrado. Cadastre um em "Serviços" antes de criar um agendamento.'}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Profissional</label>
