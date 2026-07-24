@@ -3,6 +3,7 @@ package com.nalamina.api.service;
 import com.nalamina.api.dto.agendamento.*;
 import com.nalamina.api.entity.*;
 import com.nalamina.api.entity.enums.StatusAgendamento;
+import com.nalamina.api.entity.enums.StatusPagamento;
 import com.nalamina.api.repository.*;
 import com.nalamina.api.security.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AgendamentoService {
     private final TenantRepository tenantRepository;
     private final ServicoRepository servicoRepository;
     private final ProfissionalRepository profissionalRepository;
+    private final PagamentoRepository pagamentoRepository;
 
     @Transactional(readOnly = true)
     public List<AgendamentoResponse> listar() {
@@ -132,6 +134,13 @@ public class AgendamentoService {
         agendamento.setStatus(StatusAgendamento.CANCELADO);
         agendamento.setMotivoCancelamento(motivo);
         agendamentoRepository.save(agendamento);
+
+        pagamentoRepository.findByAgendamentoEntity_Id(id).ifPresent(pagamento -> {
+            if (pagamento.getStatus() != StatusPagamento.CANCELADO) {
+                pagamento.setStatus(StatusPagamento.CANCELADO);
+                pagamentoRepository.save(pagamento);
+            }
+        });
     }
 
     // — helpers —

@@ -196,6 +196,10 @@ export default function Agendamentos() {
       setAgendamentos(prev => prev.map(a => a.id === modalCancelar.id
         ? { ...a, status: 'CANCELADO', motivoCancelamento: motivoCancelamento.trim() }
         : a));
+      setPagamentosMap(prev => {
+        const { [modalCancelar.id]: _removido, ...resto } = prev;
+        return resto;
+      });
       fecharModalCancelar();
     } catch { alert('Erro ao cancelar'); }
     finally { setCancelando(false); }
