@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PagamentoService {
 
+    private static final LocalDateTime DATA_MINIMA = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final LocalDateTime DATA_MAXIMA = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
+
     private final PagamentoRepository pagamentoRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
@@ -111,8 +114,8 @@ public class PagamentoService {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
-        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
-        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : DATA_MINIMA;
+        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : DATA_MAXIMA;
 
         return pagamentoRepository.findAllByTenant(tenantId, inicio, fim)
                 .stream()
@@ -127,8 +130,8 @@ public class PagamentoService {
 
     public RelatorioFinanceiroResponse relatorio(LocalDate dataInicio, LocalDate dataFim) {
         UUID tenantId = TenantContextHolder.getTenantId();
-        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
-        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : null;
+        LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : DATA_MINIMA;
+        LocalDateTime fim = dataFim != null ? dataFim.plusDays(1).atStartOfDay() : DATA_MAXIMA;
 
         List<PagamentoEntity> pagamentos = pagamentoRepository.findAllByTenant(tenantId, inicio, fim)
                 .stream()
