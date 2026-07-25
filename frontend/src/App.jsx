@@ -6,6 +6,8 @@ import Agendamentos from './pages/Agendamentos';
 import Servicos from './pages/Servicos';
 import Profissionais from './pages/Profissionais';
 import Pagamentos from './pages/Pagamentos';
+import Estoque from './pages/Estoque';
+import Venda from './pages/Venda';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
 
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="servicos" element={<Servicos />} />
             <Route path="profissionais" element={<Profissionais />} />
             <Route path="pagamentos" element={<Pagamentos />} />
+            <Route path="estoque" element={<Estoque />} />
+            <Route path="venda" element={<Venda />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
