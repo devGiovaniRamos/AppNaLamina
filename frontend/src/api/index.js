@@ -49,3 +49,10 @@ export const listarVendas = (params) => api.get('/vendas', { params }).then(r =>
 export const buscarVenda = (id) => api.get(`/vendas/${id}`).then(r => r.data);
 export const criarVenda = (data) => api.post('/vendas', data).then(r => r.data);
 export const cancelarVenda = (id, motivo) => api.delete(`/vendas/${id}`, { data: { motivo } }).then(r => r.data);
+
+// Campeonato (gamificação)
+export const iniciarCampeonato = (data) => api.post('/campeonatos', data).then(r => r.data);
+export const buscarCampeonatoAtivo = () => api.get('/campeonatos/ativo').then(r => r.data);
+export const listarCampeonatos = () => api.get('/campeonatos').then(r => r.data);
+export const encerrarCampeonato = (id) => api.post(`/campeonatos/${id}/encerrar`).then(r => r.data);
+export const rankingCampeonato = (id) => api.get(`/campeonatos/${id}/ranking`).then(r => r.data);

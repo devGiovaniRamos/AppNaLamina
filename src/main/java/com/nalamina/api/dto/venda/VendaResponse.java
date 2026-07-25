@@ -15,6 +15,7 @@ import java.util.UUID;
 public class VendaResponse {
     private UUID id;
     private String clienteNome;
+    private String clienteTel;
     private MetodoPagamento metodo;
     private StatusVenda status;
     private String motivoCancelamento;

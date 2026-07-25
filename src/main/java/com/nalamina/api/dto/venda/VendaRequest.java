@@ -15,6 +15,9 @@ public class VendaRequest {
     @Size(max = 100)
     private String clienteNome;
 
+    @Size(max = 20)
+    private String clienteTel;
+
     @NotNull
     private MetodoPagamento metodo;
 

@@ -8,6 +8,7 @@ import Profissionais from './pages/Profissionais';
 import Pagamentos from './pages/Pagamentos';
 import Estoque from './pages/Estoque';
 import Venda from './pages/Venda';
+import Campeonato from './pages/Campeonato';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
 
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="pagamentos" element={<Pagamentos />} />
             <Route path="estoque" element={<Estoque />} />
             <Route path="venda" element={<Venda />} />
+            <Route path="campeonato" element={<Campeonato />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
