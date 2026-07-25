@@ -34,6 +34,10 @@ function minToTime(min) {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 }
 
+function fmtDataCurta(data) {
+  return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 function gerarSlots(horarioDia, duracao) {
   if (!horarioDia?.aberto || !duracao) return [];
   const slots = [];
@@ -180,10 +184,15 @@ export default function Agendamentos() {
     return () => clearTimeout(t);
   }, [destacadoId]);
 
+  // pendente precisa de ação do barbeiro independente do dia, então ignora o filtro de data
+  const ignorarData = statusFiltro === 'PENDENTE';
+
   const filtrados = agendamentos
-    .filter(a => a.data === dataFiltro)
+    .filter(a => ignorarData || a.data === dataFiltro)
     .filter(a => statusFiltro === 'TODOS' || a.status === statusFiltro)
-    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+    .sort((a, b) => ignorarData
+      ? `${a.data}${a.horaInicio}`.localeCompare(`${b.data}${b.horaInicio}`)
+      : a.horaInicio.localeCompare(b.horaInicio));
 
   // duração total dos serviços selecionados (soma de todos)
   const duracaoTotal = useMemo(
@@ -323,7 +332,9 @@ export default function Agendamentos() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Agendamentos</h1>
-          <p className="text-slate-500 text-sm mt-1">{filtrados.length} agendamento(s) no dia</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {filtrados.length} agendamento(s) {ignorarData ? 'pendente(s) (todas as datas)' : 'no dia'}
+          </p>
         </div>
         <button
           onClick={() => { setForm(formVazio); setError(''); setModalNovo(true); }}
@@ -343,8 +354,14 @@ export default function Agendamentos() {
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-2">
           <Calendar size={16} className="text-slate-400" />
-          <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input
+            type="date"
+            value={dataFiltro}
+            onChange={e => setDataFiltro(e.target.value)}
+            disabled={ignorarData}
+            title={ignorarData ? 'Pendentes mostra todas as datas' : undefined}
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          />
         </div>
         <div className="flex items-center gap-1.5">
           {FILTROS_STATUS.map(f => (
@@ -381,6 +398,7 @@ export default function Agendamentos() {
               >
                 <div className="flex items-center gap-4">
                   <div className="text-center w-14">
+                    {ignorarData && <p className="text-[10px] font-medium text-blue-500 mb-0.5">{fmtDataCurta(ag.data)}</p>}
                     <p className="font-semibold text-slate-800 text-sm">{ag.horaInicio}</p>
                     <p className="text-xs text-slate-400">{ag.horaFim}</p>
                   </div>
