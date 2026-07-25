@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Flag } from 'lucide-react';
+import { useState, useEffect, Fragment } from 'react';
+import { Trophy, Medal, Award, Flag, ChevronDown, ChevronRight } from 'lucide-react';
 import * as api from '../api';
 
 const TIPO_LABEL = { MENSAL: 'Mensal', BIMESTRAL: 'Bimestral', TRIMESTRAL: 'Trimestral' };
@@ -17,6 +17,10 @@ export default function Campeonato() {
   const [encerrando, setEncerrando] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState('');
+
+  const [expandidoId, setExpandidoId] = useState(null);
+  const [rankingsHistorico, setRankingsHistorico] = useState({});
+  const [carregandoRankingId, setCarregandoRankingId] = useState(null);
 
   useEffect(() => { carregar(); }, []);
 
@@ -71,6 +75,19 @@ export default function Campeonato() {
     } catch (err) {
       alert(err.response?.data?.message || 'Erro ao encerrar campeonato');
     } finally { setEncerrando(false); }
+  }
+
+  async function toggleHistorico(id) {
+    if (expandidoId === id) { setExpandidoId(null); return; }
+    setExpandidoId(id);
+    if (rankingsHistorico[id]) return;
+    setCarregandoRankingId(id);
+    try {
+      const rank = await api.rankingCampeonato(id);
+      setRankingsHistorico(prev => ({ ...prev, [id]: rank }));
+    } catch {
+      setRankingsHistorico(prev => ({ ...prev, [id]: [] }));
+    } finally { setCarregandoRankingId(null); }
   }
 
   const fmtData = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '';
@@ -150,33 +167,7 @@ export default function Campeonato() {
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="font-semibold text-slate-800">Ranking</h2>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium w-16">Pos.</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Cliente</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Telefone</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Pontos</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {ranking.map(r => (
-                <tr key={r.clienteTel} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-slate-600">
-                    {r.posicao === 1 ? <Medal size={16} className="text-amber-500" /> :
-                     r.posicao === 2 ? <Medal size={16} className="text-slate-400" /> :
-                     r.posicao === 3 ? <Medal size={16} className="text-amber-700" /> : r.posicao}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{r.clienteNome}</td>
-                  <td className="px-4 py-3 text-slate-500">{r.clienteTel}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">{r.pontos}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {ranking.length === 0 && (
-            <div className="text-center py-10 text-slate-400 text-sm">Nenhum ponto gerado ainda neste campeonato</div>
-          )}
+          <RankingTable ranking={ranking} />
         </section>
       )}
 
@@ -185,26 +176,102 @@ export default function Campeonato() {
           <h2 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
             <Flag size={15} /> Histórico
           </h2>
+          <p className="text-xs text-slate-400 mb-2">Clique em um campeonato para ver o ranking e o vencedor.</p>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <tbody className="divide-y divide-slate-50">
-                {historico.map(c => (
-                  <tr key={c.id}>
-                    <td className="px-4 py-2.5 text-slate-700">{TIPO_LABEL[c.tipo]}</td>
-                    <td className="px-4 py-2.5 text-slate-500 text-xs">{fmtData(c.dataInicio)} – {fmtData(c.dataFim)}</td>
-                    <td className="px-4 py-2.5 text-slate-500 text-xs">a cada {fmt(c.valorPorPonto)} = 1 ponto</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'ATIVO' ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {c.status === 'ATIVO' ? 'Ativo' : 'Encerrado'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {historico.map(c => {
+                  const expandido = expandidoId === c.id;
+                  const rankingC = rankingsHistorico[c.id];
+                  const vencedor = rankingC?.[0];
+                  return (
+                    <Fragment key={c.id}>
+                      <tr onClick={() => toggleHistorico(c.id)}
+                        className="cursor-pointer hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-2.5 w-6 text-slate-400">
+                          {expandido ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-700">{TIPO_LABEL[c.tipo]}</td>
+                        <td className="px-4 py-2.5 text-slate-500 text-xs">{fmtData(c.dataInicio)} – {fmtData(c.dataFim)}</td>
+                        <td className="px-4 py-2.5 text-slate-500 text-xs">a cada {fmt(c.valorPorPonto)} = 1 ponto</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'ATIVO' ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                            {c.status === 'ATIVO' ? 'Ativo' : 'Encerrado'}
+                          </span>
+                        </td>
+                      </tr>
+                      {expandido && (
+                        <tr>
+                          <td colSpan={5} className="p-0 bg-slate-50">
+                            {carregandoRankingId === c.id ? (
+                              <div className="text-center py-6 text-slate-400 text-sm">Carregando ranking...</div>
+                            ) : (
+                              <div className="p-4 space-y-3">
+                                {c.premiacao && (
+                                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 text-amber-800 text-sm rounded-lg px-4 py-3">
+                                    <Award size={16} className="mt-0.5 shrink-0" />
+                                    <span>{c.premiacao}</span>
+                                  </div>
+                                )}
+                                {vencedor && (
+                                  <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-lg px-4 py-3">
+                                    <Trophy size={18} className="text-amber-500 shrink-0" />
+                                    <span className="text-sm text-slate-700">
+                                      Vencedor: <span className="font-semibold text-slate-800">{vencedor.clienteNome}</span>
+                                      {' '}({vencedor.clienteTel}) — {vencedor.pontos} ponto(s)
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="bg-white rounded-lg border border-slate-100 overflow-hidden">
+                                  <RankingTable ranking={rankingC || []} />
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </section>
       )}
     </div>
+  );
+}
+
+function RankingTable({ ranking }) {
+  return (
+    <>
+      <table className="w-full text-sm">
+        <thead className="bg-slate-50 border-b border-slate-100">
+          <tr>
+            <th className="text-left px-4 py-3 text-slate-500 font-medium w-16">Pos.</th>
+            <th className="text-left px-4 py-3 text-slate-500 font-medium">Cliente</th>
+            <th className="text-left px-4 py-3 text-slate-500 font-medium">Telefone</th>
+            <th className="text-left px-4 py-3 text-slate-500 font-medium">Pontos</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {ranking.map(r => (
+            <tr key={r.clienteTel} className="hover:bg-slate-50 transition-colors">
+              <td className="px-4 py-3 text-slate-600">
+                {r.posicao === 1 ? <Medal size={16} className="text-amber-500" /> :
+                 r.posicao === 2 ? <Medal size={16} className="text-slate-400" /> :
+                 r.posicao === 3 ? <Medal size={16} className="text-amber-700" /> : r.posicao}
+              </td>
+              <td className="px-4 py-3 font-medium text-slate-800">{r.clienteNome}</td>
+              <td className="px-4 py-3 text-slate-500">{r.clienteTel}</td>
+              <td className="px-4 py-3 font-semibold text-slate-800">{r.pontos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {ranking.length === 0 && (
+        <div className="text-center py-10 text-slate-400 text-sm">Nenhum ponto gerado ainda neste campeonato</div>
+      )}
+    </>
   );
 }
