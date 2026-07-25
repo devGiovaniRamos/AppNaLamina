@@ -91,6 +91,7 @@ public class TenantService {
                 .email(tenant.getEmail())
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
+                .slug(tenant.getSlug())
                 .horarios(horarios.stream().map(h -> BarbeariaResponse.HorarioResponse.builder()
                         .diaSemana(h.getDiaSemana())
                         .aberto(h.getAberto())

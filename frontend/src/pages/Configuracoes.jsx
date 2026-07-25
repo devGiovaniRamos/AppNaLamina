@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Copy, Check } from 'lucide-react';
 import * as api from '../api';
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -11,6 +12,7 @@ export default function Configuracoes() {
   const [aplicando, setAplicando] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
+  const [linkCopiado, setLinkCopiado] = useState(false);
 
   const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '' });
   const [template, setTemplate] = useState({ horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: '' });
@@ -98,12 +100,43 @@ export default function Configuracoes() {
   if (loading) return <div className="p-6 text-center text-slate-400 py-16">Carregando...</div>;
 
   const horarios = barbearia?.horarios || [];
+  const linkPublico = barbearia?.slug ? `${window.location.origin}/agendar/${barbearia.slug}` : '';
+
+  async function handleCopiarLink() {
+    if (!linkPublico) return;
+    try {
+      await navigator.clipboard.writeText(linkPublico);
+    } catch {
+      // clipboard indisponível (ex: contexto não seguro) — o link ainda pode ser copiado manualmente do campo
+    }
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 2000);
+  }
 
   return (
     <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Configurações</h1>
 
       {sucesso && <p className="text-green-600 text-sm bg-green-50 p-3 rounded-lg mb-4">{sucesso}</p>}
+
+      {/* Link público de agendamento */}
+      {linkPublico && (
+        <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
+          <h2 className="font-semibold text-slate-800 mb-1">Link público de agendamento</h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Compartilhe esse link com seus clientes para eles agendarem sem precisar criar conta.
+          </p>
+          <div className="flex items-center gap-2">
+            <input readOnly className="input flex-1 text-slate-600" value={linkPublico}
+              onClick={e => e.target.select()} />
+            <button onClick={handleCopiarLink}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors shrink-0">
+              {linkCopiado ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
+              {linkCopiado ? 'Copiado!' : 'Copiar link'}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Perfil */}
       <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
