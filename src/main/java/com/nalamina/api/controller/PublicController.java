@@ -7,6 +7,8 @@ import com.nalamina.api.dto.agendamento.SlotDisponivel;
 import com.nalamina.api.dto.campeonato.CampeonatoResponse;
 import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
+import com.nalamina.api.dto.tenant.BarbeariaPublicaResponse;
+import com.nalamina.api.entity.TenantEntity;
 import com.nalamina.api.repository.ServicoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.service.AgendamentoService;
@@ -39,9 +41,23 @@ public class PublicController {
     private final CampeonatoService campeonatoService;
 
     private UUID resolverTenantId(String slug) {
+        return resolverTenant(slug).getId();
+    }
+
+    private TenantEntity resolverTenant(String slug) {
         return tenantRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"))
-                .getId();
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+    }
+
+    @GetMapping("/barbearia")
+    public ResponseEntity<BarbeariaPublicaResponse> barbearia(@PathVariable String slug) {
+        TenantEntity tenant = resolverTenant(slug);
+        return ResponseEntity.ok(BarbeariaPublicaResponse.builder()
+                .nome(tenant.getNome())
+                .telefone(tenant.getTelefone())
+                .endereco(tenant.getEndereco())
+                .descricao(tenant.getDescricao())
+                .build());
     }
 
     @GetMapping("/servicos")
