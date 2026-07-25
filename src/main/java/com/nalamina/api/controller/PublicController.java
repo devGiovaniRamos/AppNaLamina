@@ -4,10 +4,13 @@ import com.nalamina.api.dto.agendamento.AgendamentoRequest;
 import com.nalamina.api.dto.agendamento.AgendamentoResponse;
 import com.nalamina.api.dto.agendamento.PublicAgendamentoRequest;
 import com.nalamina.api.dto.agendamento.SlotDisponivel;
+import com.nalamina.api.dto.campeonato.CampeonatoResponse;
+import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
 import com.nalamina.api.repository.ServicoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.service.AgendamentoService;
+import com.nalamina.api.service.CampeonatoService;
 import com.nalamina.api.service.SlotService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class PublicController {
     private final AgendamentoService agendamentoService;
     private final ProfissionalRepository profissionalRepository;
     private final TenantRepository tenantRepository;
+    private final CampeonatoService campeonatoService;
 
     private UUID resolverTenantId(String slug) {
         return tenantRepository.findBySlug(slug)
@@ -101,5 +105,17 @@ public class PublicController {
                         .build())
                 .toList();
         return ResponseEntity.ok(profissionais);
+    }
+
+    @GetMapping("/campeonato")
+    public ResponseEntity<CampeonatoResponse> campeonatoAtivo(@PathVariable String slug) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(campeonatoService.buscarAtivoPublico(tenantId));
+    }
+
+    @GetMapping("/ranking")
+    public ResponseEntity<List<RankingPublicoItemResponse>> ranking(@PathVariable String slug) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(campeonatoService.rankingPublico(tenantId));
     }
 }

@@ -8,6 +8,7 @@ import com.nalamina.api.entity.PagamentoEntity;
 import com.nalamina.api.entity.ServicoEntity;
 import com.nalamina.api.entity.TenantEntity;
 import com.nalamina.api.entity.enums.MetodoPagamento;
+import com.nalamina.api.entity.enums.OrigemPonto;
 import com.nalamina.api.entity.enums.StatusAgendamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
 import com.nalamina.api.repository.AgendamentoRepository;
@@ -40,6 +41,7 @@ public class PagamentoService {
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
     private final PagarmeService pagarmeService;
+    private final PontuacaoService pontuacaoService;
 
     private BigDecimal calcularTaxa(BigDecimal valorServico, BigDecimal taxaPct) {
         if (taxaPct == null || taxaPct.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
@@ -91,6 +93,12 @@ public class PagamentoService {
         }
 
         PagamentoEntity pagamento = pagamentoRepository.save(builder.build());
+
+        if (pagamento.getStatus() == StatusPagamento.PAGO) {
+            pontuacaoService.gerarPontos(tenant, agendamento.getClienteTel(), agendamento.getClienteNome(),
+                    OrigemPonto.AGENDAMENTO, pagamento.getId(), valorTotal);
+        }
+
         return toResponse(pagamento, valorServico, taxaPct, valorTaxa, valorTotal);
     }
 
@@ -182,6 +190,9 @@ public class PagamentoService {
         AgendamentoEntity agendamento = pagamento.getAgendamentoEntity();
         agendamento.setStatus(StatusAgendamento.CONCLUIDO);
         agendamentoRepository.save(agendamento);
+
+        pontuacaoService.gerarPontos(agendamento.getTenantEntity(), agendamento.getClienteTel(), agendamento.getClienteNome(),
+                OrigemPonto.AGENDAMENTO, pagamento.getId(), pagamento.getValor());
     }
 
     private PagamentoResponse toResponse(

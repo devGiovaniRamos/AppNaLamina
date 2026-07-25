@@ -6,6 +6,7 @@ import com.nalamina.api.entity.ProdutoEntity;
 import com.nalamina.api.entity.TenantEntity;
 import com.nalamina.api.entity.VendaEntity;
 import com.nalamina.api.entity.VendaItemEntity;
+import com.nalamina.api.entity.enums.OrigemPonto;
 import com.nalamina.api.entity.enums.StatusVenda;
 import com.nalamina.api.entity.enums.TipoMovimentoEstoque;
 import com.nalamina.api.repository.MovimentoEstoqueRepository;
@@ -13,6 +14,7 @@ import com.nalamina.api.repository.ProdutoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.repository.VendaRepository;
 import com.nalamina.api.security.TenantContextHolder;
+import com.nalamina.api.util.TelefoneUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class VendaService {
     private final ProdutoRepository produtoRepository;
     private final MovimentoEstoqueRepository movimentoEstoqueRepository;
     private final TenantRepository tenantRepository;
+    private final PontuacaoService pontuacaoService;
 
     @Transactional
     public VendaResponse criar(VendaRequest request) {
@@ -44,9 +47,12 @@ public class VendaService {
         TenantEntity tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
 
+        String clienteTel = TelefoneUtil.normalizar(request.getClienteTel());
+
         VendaEntity venda = VendaEntity.builder()
                 .tenantEntity(tenant)
                 .clienteNome(request.getClienteNome())
+                .clienteTel(clienteTel)
                 .metodo(request.getMetodo())
                 .valorTotal(BigDecimal.ZERO)
                 .build();
@@ -92,7 +98,14 @@ public class VendaService {
         venda.setValorTotal(valorTotal);
         venda.setItens(itens);
 
-        return toResponse(vendaRepository.save(venda));
+        VendaEntity salva = vendaRepository.save(venda);
+
+        if (clienteTel != null) {
+            pontuacaoService.gerarPontos(tenant, clienteTel, salva.getClienteNome(),
+                    OrigemPonto.VENDA, salva.getId(), valorTotal);
+        }
+
+        return toResponse(salva);
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +154,8 @@ public class VendaService {
         venda.setStatus(StatusVenda.CANCELADA);
         venda.setMotivoCancelamento(motivo);
         vendaRepository.save(venda);
+
+        pontuacaoService.estornarPontos(tenantId, OrigemPonto.VENDA, venda.getId());
     }
 
     private VendaResponse toResponse(VendaEntity venda) {
@@ -158,6 +173,7 @@ public class VendaService {
         return VendaResponse.builder()
                 .id(venda.getId())
                 .clienteNome(venda.getClienteNome())
+                .clienteTel(venda.getClienteTel())
                 .metodo(venda.getMetodo())
                 .status(venda.getStatus())
                 .motivoCancelamento(venda.getMotivoCancelamento())

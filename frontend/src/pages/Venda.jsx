@@ -11,6 +11,7 @@ export default function Venda() {
   const [buscando, setBuscando] = useState(false);
   const [carrinho, setCarrinho] = useState([]);
   const [clienteNome, setClienteNome] = useState('');
+  const [clienteTel, setClienteTel] = useState('');
   const [metodo, setMetodo] = useState('DINHEIRO');
   const [finalizando, setFinalizando] = useState(false);
   const [erro, setErro] = useState('');
@@ -88,12 +89,14 @@ export default function Venda() {
     try {
       const venda = await api.criarVenda({
         clienteNome: clienteNome || null,
+        clienteTel: clienteTel || null,
         metodo,
         itens: carrinho.map(i => ({ produtoId: i.produto.id, quantidade: i.quantidade })),
       });
       setSucesso(`Venda finalizada! Total: R$ ${Number(venda.valorTotal).toFixed(2)}`);
       setCarrinho([]);
       setClienteNome('');
+      setClienteTel('');
       setMetodo('DINHEIRO');
       carregarVendasRecentes();
       setTimeout(() => setSucesso(''), 5000);
@@ -202,10 +205,14 @@ export default function Venda() {
 
       {/* Checkout */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 mb-8">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Cliente (opcional)</label>
             <input className="input" value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Telefone (opcional)</label>
+            <input className="input" placeholder="Para pontuar no campeonato" value={clienteTel} onChange={e => setClienteTel(e.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Forma de pagamento</label>

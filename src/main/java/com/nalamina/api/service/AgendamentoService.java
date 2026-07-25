@@ -2,10 +2,12 @@ package com.nalamina.api.service;
 
 import com.nalamina.api.dto.agendamento.*;
 import com.nalamina.api.entity.*;
+import com.nalamina.api.entity.enums.OrigemPonto;
 import com.nalamina.api.entity.enums.StatusAgendamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
 import com.nalamina.api.repository.*;
 import com.nalamina.api.security.TenantContextHolder;
+import com.nalamina.api.util.TelefoneUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class AgendamentoService {
     private final ServicoRepository servicoRepository;
     private final ProfissionalRepository profissionalRepository;
     private final PagamentoRepository pagamentoRepository;
+    private final PontuacaoService pontuacaoService;
 
     @Transactional(readOnly = true)
     public List<AgendamentoResponse> listar() {
@@ -71,7 +74,7 @@ public class AgendamentoService {
                 .servicos(servicos)
                 .profissionalEntity(profissional)
                 .clienteNome(request.getClienteNome())
-                .clienteTel(request.getClienteTel())
+                .clienteTel(TelefoneUtil.normalizar(request.getClienteTel()))
                 .data(request.getData())
                 .horaInicio(request.getHoraInicio())
                 .horaFim(request.getHoraFim())
@@ -104,7 +107,7 @@ public class AgendamentoService {
         agendamento.getServicos().addAll(servicos);
         agendamento.setProfissionalEntity(profissional);
         agendamento.setClienteNome(request.getClienteNome());
-        agendamento.setClienteTel(request.getClienteTel());
+        agendamento.setClienteTel(TelefoneUtil.normalizar(request.getClienteTel()));
         agendamento.setData(request.getData());
         agendamento.setHoraInicio(request.getHoraInicio());
         agendamento.setHoraFim(request.getHoraFim());
@@ -139,6 +142,7 @@ public class AgendamentoService {
             if (pagamento.getStatus() != StatusPagamento.CANCELADO) {
                 pagamento.setStatus(StatusPagamento.CANCELADO);
                 pagamentoRepository.save(pagamento);
+                pontuacaoService.estornarPontos(tenantId, OrigemPonto.AGENDAMENTO, pagamento.getId());
             }
         });
     }
