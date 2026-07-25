@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, PackagePlus, PackageMinus, AlertTriangle, Boxes, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Pencil, Trash2, PackagePlus, PackageMinus, AlertTriangle, Boxes, DollarSign, TrendingUp, TrendingDown, Search } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
 
@@ -14,6 +14,7 @@ const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(),
 
 export default function Estoque() {
   const [produtos, setProdutos] = useState([]);
+  const [busca, setBusca] = useState('');
   const [relatorio, setRelatorio] = useState(null);
   const [dataInicio, setDataInicio] = useState(primeiroDiaMes);
   const [dataFim, setDataFim] = useState(hoje);
@@ -139,16 +140,37 @@ export default function Estoque() {
 
   const fmt = (v) => `R$ ${Number(v || 0).toFixed(2)}`;
 
+  const produtosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return produtos;
+    return produtos.filter(p =>
+      p.nome.toLowerCase().includes(termo) ||
+      p.sku?.toLowerCase().includes(termo) ||
+      p.ean?.includes(termo)
+    );
+  }, [produtos, busca]);
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Estoque</h1>
-          <p className="text-slate-500 text-sm mt-1">{produtos.length} produto(s) ativo(s)</p>
+          <p className="text-slate-500 text-sm mt-1">{produtosFiltrados.length} de {produtos.length} produto(s) ativo(s)</p>
         </div>
         <button onClick={abrirCriar} className="flex items-center gap-2 btn-primary">
           <Plus size={16} /> Novo produto
         </button>
+      </div>
+
+      {/* Busca por nome, SKU ou EAN */}
+      <div className="relative mb-4 max-w-sm">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          placeholder="Buscar por nome, SKU ou EAN..."
+          className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {/* Filtro de data (para entradas/saídas do período) */}
@@ -226,7 +248,7 @@ export default function Estoque() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {produtos.map(p => (
+              {produtosFiltrados.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-800">{p.nome}</p>
@@ -265,8 +287,10 @@ export default function Estoque() {
               ))}
             </tbody>
           </table>
-          {produtos.length === 0 && (
-            <div className="text-center py-12 text-slate-400">Nenhum produto cadastrado</div>
+          {produtosFiltrados.length === 0 && (
+            <div className="text-center py-12 text-slate-400">
+              {produtos.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado para essa busca'}
+            </div>
           )}
         </div>
       )}
