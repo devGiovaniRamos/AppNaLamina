@@ -51,6 +51,17 @@ public class TenantEntity implements Persistable<UUID> {
     @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
     private java.math.BigDecimal taxaAgendamentoPct;
 
+    @Builder.Default
+    @Column(name = "sinal_obrigatorio", nullable = false)
+    private Boolean sinalObrigatorio = false;
+
+    @Column(name = "sinal_percentual", precision = 5, scale = 2)
+    private java.math.BigDecimal sinalPercentual;
+
+    @Builder.Default
+    @Column(name = "janela_cancelamento_horas", nullable = false)
+    private Integer janelaCancelamentoHoras = 12;
+
     @Transient
     @Builder.Default
     @EqualsAndHashCode.Exclude

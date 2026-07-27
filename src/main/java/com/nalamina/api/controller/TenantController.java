@@ -1,6 +1,7 @@
 package com.nalamina.api.controller;
 
 import com.nalamina.api.dto.tenant.BarbeariaResponse;
+import com.nalamina.api.dto.tenant.ConfigSinalRequest;
 import com.nalamina.api.dto.tenant.HorarioFuncionamentoRequest;
 import com.nalamina.api.dto.tenant.HorarioTodosRequest;
 import com.nalamina.api.dto.tenant.PerfilBarbeariaRequest;
@@ -38,5 +39,11 @@ public class TenantController {
     public ResponseEntity<BarbeariaResponse> atualizarTodosHorarios(
             @Valid @RequestBody HorarioTodosRequest request) {
         return ResponseEntity.ok(tenantService.atualizarTodosHorarios(request));
+    }
+
+    @PutMapping("/sinal")
+    public ResponseEntity<BarbeariaResponse> atualizarConfigSinal(
+            @Valid @RequestBody ConfigSinalRequest request) {
+        return ResponseEntity.ok(tenantService.atualizarConfigSinal(request));
     }
 }

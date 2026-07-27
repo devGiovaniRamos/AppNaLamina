@@ -40,9 +40,9 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS}
 
-pagarme:
-  api-key: ${PAGARME_API_KEY:sk_test_placeholder}
-  webhook-secret: ${PAGARME_WEBHOOK_SECRET:}
+mercadopago:
+  access-token: ${MERCADOPAGO_ACCESS_TOKEN:TEST-placeholder}
+  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
 
 logging:
   level:

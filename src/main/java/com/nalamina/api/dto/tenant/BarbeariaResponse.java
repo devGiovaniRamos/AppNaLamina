@@ -3,6 +3,7 @@ package com.nalamina.api.dto.tenant;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,9 @@ public class BarbeariaResponse {
     private String endereco;
     private String descricao;
     private String slug;
+    private Boolean sinalObrigatorio;
+    private BigDecimal sinalPercentual;
+    private Integer janelaCancelamentoHoras;
     private List<HorarioResponse> horarios;
 
     @Data

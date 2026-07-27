@@ -28,4 +28,9 @@ public class PagamentoController {
     public ResponseEntity<PagamentoResponse> buscar(@PathVariable UUID agendamentoId) {
         return ResponseEntity.ok(pagamentoService.buscarPorAgendamento(agendamentoId));
     }
+
+    @PatchMapping("/sinal/confirmar-dinheiro")
+    public ResponseEntity<PagamentoResponse> confirmarSinalDinheiro(@PathVariable UUID agendamentoId) {
+        return ResponseEntity.ok(pagamentoService.confirmarSinalDinheiro(agendamentoId));
+    }
 }

@@ -1,5 +1,6 @@
 package com.nalamina.api.dto.agendamento;
 
+import com.nalamina.api.entity.enums.MetodoPagamento;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,4 +33,6 @@ public class PublicAgendamentoRequest {
     private LocalTime horaFim;
 
     private String observacao;
+
+    private MetodoPagamento metodoSinal;
 }

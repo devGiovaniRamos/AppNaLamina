@@ -2,6 +2,7 @@ package com.nalamina.api.entity;
 
 import com.nalamina.api.entity.enums.MetodoPagamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
+import com.nalamina.api.entity.enums.TipoPagamento;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,14 +41,22 @@ public class PagamentoEntity {
     @Column(name = "pago_em")
     private LocalDateTime pagoEm;
 
-    @Column(name = "pagarme_charge_id", length = 255)
-    private String pagarmeChargeId;
+    @Column(name = "mercadopago_payment_id", length = 255)
+    private String mercadoPagoPaymentId;
 
     @Column(name = "pix_copia_e_cola", columnDefinition = "TEXT")
     private String pixCopiaECola;
 
+    @Column(name = "pix_qr_code_base64", columnDefinition = "TEXT")
+    private String pixQrCodeBase64;
+
     @Column(name = "pix_expira_em")
     private LocalDateTime pixExpiraEm;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TipoPagamento tipo = TipoPagamento.TOTAL;
 
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)

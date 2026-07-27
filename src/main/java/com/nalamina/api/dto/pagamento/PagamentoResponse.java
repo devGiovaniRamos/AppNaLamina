@@ -2,6 +2,7 @@ package com.nalamina.api.dto.pagamento;
 
 import com.nalamina.api.entity.enums.MetodoPagamento;
 import com.nalamina.api.entity.enums.StatusPagamento;
+import com.nalamina.api.entity.enums.TipoPagamento;
 import lombok.Builder;
 import lombok.Data;
 
@@ -27,5 +28,7 @@ public class PagamentoResponse {
     private LocalDateTime pagoEm;
     private LocalDateTime criadoEm;
     private String pixCopiaECola;
+    private String pixQrCodeBase64;
     private LocalDateTime pixExpiraEm;
+    private TipoPagamento tipo;
 }

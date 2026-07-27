@@ -1,11 +1,15 @@
 package com.nalamina.api.controller;
 
+import com.nalamina.api.dto.agendamento.AgendamentoBuscaPublicaResponse;
+import com.nalamina.api.dto.agendamento.AgendamentoPublicoResponse;
 import com.nalamina.api.dto.agendamento.AgendamentoRequest;
 import com.nalamina.api.dto.agendamento.AgendamentoResponse;
+import com.nalamina.api.dto.agendamento.CancelamentoPublicoRequest;
 import com.nalamina.api.dto.agendamento.PublicAgendamentoRequest;
 import com.nalamina.api.dto.agendamento.SlotDisponivel;
 import com.nalamina.api.dto.campeonato.CampeonatoResponse;
 import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
+import com.nalamina.api.dto.pagamento.PagamentoResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
 import com.nalamina.api.dto.tenant.BarbeariaPublicaResponse;
 import com.nalamina.api.entity.TenantEntity;
@@ -13,6 +17,7 @@ import com.nalamina.api.repository.ServicoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.service.AgendamentoService;
 import com.nalamina.api.service.CampeonatoService;
+import com.nalamina.api.service.PagamentoService;
 import com.nalamina.api.service.SlotService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +41,7 @@ public class PublicController {
     private final ServicoRepository servicoRepository;
     private final SlotService slotService;
     private final AgendamentoService agendamentoService;
+    private final PagamentoService pagamentoService;
     private final ProfissionalRepository profissionalRepository;
     private final TenantRepository tenantRepository;
     private final CampeonatoService campeonatoService;
@@ -57,6 +63,9 @@ public class PublicController {
                 .telefone(tenant.getTelefone())
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
+                .sinalObrigatorio(tenant.getSinalObrigatorio())
+                .sinalPercentual(tenant.getSinalPercentual())
+                .janelaCancelamentoHoras(tenant.getJanelaCancelamentoHoras())
                 .build());
     }
 
@@ -88,11 +97,16 @@ public class PublicController {
     }
 
     @PostMapping("/agendamentos")
-    public ResponseEntity<AgendamentoResponse> criar(
+    public ResponseEntity<AgendamentoPublicoResponse> criar(
             @PathVariable String slug,
             @Valid @RequestBody PublicAgendamentoRequest request) {
 
-        UUID tenantId = resolverTenantId(slug);
+        TenantEntity tenant = resolverTenant(slug);
+        UUID tenantId = tenant.getId();
+
+        if (Boolean.TRUE.equals(tenant.getSinalObrigatorio()) && request.getMetodoSinal() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Forma de pagamento do sinal é obrigatória");
+        }
 
         AgendamentoRequest agendamentoRequest = new AgendamentoRequest();
         agendamentoRequest.setClienteNome(request.getClienteNome());
@@ -104,7 +118,35 @@ public class PublicController {
         agendamentoRequest.setHoraFim(request.getHoraFim());
         agendamentoRequest.setObservacao(request.getObservacao());
 
-        return ResponseEntity.status(201).body(agendamentoService.criarPublico(tenantId, agendamentoRequest));
+        AgendamentoResponse agendamento = agendamentoService.criarPublico(tenantId, agendamentoRequest);
+
+        PagamentoResponse sinal = null;
+        if (Boolean.TRUE.equals(tenant.getSinalObrigatorio())) {
+            sinal = pagamentoService.registrarSinal(tenantId, agendamento.getId(), request.getMetodoSinal());
+        }
+
+        return ResponseEntity.status(201).body(AgendamentoPublicoResponse.builder()
+                .agendamento(agendamento)
+                .sinal(sinal)
+                .build());
+    }
+
+    @GetMapping("/agendamentos")
+    public ResponseEntity<List<AgendamentoBuscaPublicaResponse>> buscarPorTelefone(
+            @PathVariable String slug,
+            @RequestParam String telefone) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(agendamentoService.buscarPorTelefone(tenantId, telefone));
+    }
+
+    @PostMapping("/agendamentos/{id}/cancelar")
+    public ResponseEntity<Void> cancelar(
+            @PathVariable String slug,
+            @PathVariable UUID id,
+            @Valid @RequestBody CancelamentoPublicoRequest request) {
+        UUID tenantId = resolverTenantId(slug);
+        agendamentoService.cancelarPublico(tenantId, id, request.getTelefone());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/profissionais")

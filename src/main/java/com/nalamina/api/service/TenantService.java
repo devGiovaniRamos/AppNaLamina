@@ -1,6 +1,7 @@
 package com.nalamina.api.service;
 
 import com.nalamina.api.dto.tenant.BarbeariaResponse;
+import com.nalamina.api.dto.tenant.ConfigSinalRequest;
 import com.nalamina.api.dto.tenant.HorarioFuncionamentoRequest;
 import com.nalamina.api.dto.tenant.HorarioTodosRequest;
 import com.nalamina.api.dto.tenant.PerfilBarbeariaRequest;
@@ -57,6 +58,31 @@ public class TenantService {
     }
 
     @Transactional
+    public BarbeariaResponse atualizarConfigSinal(ConfigSinalRequest request) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        TenantEntity tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Barbearia não encontrada"));
+
+        if (Boolean.TRUE.equals(request.getSinalObrigatorio())) {
+            java.math.BigDecimal percentual = request.getSinalPercentual();
+            if (percentual == null || percentual.compareTo(java.math.BigDecimal.ZERO) <= 0
+                    || percentual.compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Percentual do sinal deve estar entre 1 e 100");
+            }
+        }
+
+        tenant.setSinalObrigatorio(request.getSinalObrigatorio());
+        tenant.setSinalPercentual(request.getSinalPercentual());
+        tenant.setJanelaCancelamentoHoras(request.getJanelaCancelamentoHoras());
+        tenantRepository.save(tenant);
+
+        List<HorarioFuncionamentoEntity> horarios = horarioRepository
+                .findByTenantEntity_IdOrderByDiaSemana(tenantId);
+
+        return toResponse(tenant, horarios);
+    }
+
+    @Transactional
     public BarbeariaResponse atualizarHorario(HorarioFuncionamentoRequest request) {
         UUID tenantId = TenantContextHolder.getTenantId();
         TenantEntity tenant = tenantRepository.findById(tenantId)
@@ -92,6 +118,9 @@ public class TenantService {
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
                 .slug(tenant.getSlug())
+                .sinalObrigatorio(tenant.getSinalObrigatorio())
+                .sinalPercentual(tenant.getSinalPercentual())
+                .janelaCancelamentoHoras(tenant.getJanelaCancelamentoHoras())
                 .horarios(horarios.stream().map(h -> BarbeariaResponse.HorarioResponse.builder()
                         .diaSemana(h.getDiaSemana())
                         .aberto(h.getAberto())

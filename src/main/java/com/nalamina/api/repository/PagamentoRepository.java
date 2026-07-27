@@ -1,6 +1,7 @@
 package com.nalamina.api.repository;
 
 import com.nalamina.api.entity.PagamentoEntity;
+import com.nalamina.api.entity.enums.TipoPagamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,11 +15,11 @@ import java.util.UUID;
 @Repository
 public interface PagamentoRepository extends JpaRepository<PagamentoEntity, UUID> {
 
-    Optional<PagamentoEntity> findByAgendamentoEntity_Id(UUID agendamentoId);
+    Optional<PagamentoEntity> findByAgendamentoEntity_IdAndTipo(UUID agendamentoId, TipoPagamento tipo);
 
-    boolean existsByAgendamentoEntity_Id(UUID agendamentoId);
+    boolean existsByAgendamentoEntity_IdAndTipo(UUID agendamentoId, TipoPagamento tipo);
 
-    Optional<PagamentoEntity> findByPagarmeChargeId(String pagarmeChargeId);
+    Optional<PagamentoEntity> findByMercadoPagoPaymentId(String mercadoPagoPaymentId);
 
     @Query("SELECT DISTINCT p FROM PagamentoEntity p " +
            "JOIN FETCH p.agendamentoEntity a " +

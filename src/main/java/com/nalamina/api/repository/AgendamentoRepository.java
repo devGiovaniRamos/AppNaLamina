@@ -49,4 +49,19 @@ public interface AgendamentoRepository extends JpaRepository<AgendamentoEntity, 
             @Param("data") LocalDate data,
             @Param("cancelado") StatusAgendamento cancelado
     );
+
+    @Query("""
+    SELECT a FROM AgendamentoEntity a
+    WHERE a.tenantEntity.id = :tenantId
+      AND a.clienteTel = :clienteTel
+      AND a.data >= :hoje
+      AND a.status IN :statusPermitidos
+    ORDER BY a.data ASC, a.horaInicio ASC
+""")
+    List<AgendamentoEntity> findFuturosPorTelefone(
+            @Param("tenantId") UUID tenantId,
+            @Param("clienteTel") String clienteTel,
+            @Param("hoje") LocalDate hoje,
+            @Param("statusPermitidos") List<StatusAgendamento> statusPermitidos
+    );
 }
