@@ -6,3 +6,7 @@ export const listarProfissionais = (slug) => api.get(`/public/${slug}/profission
 export const listarSlots = (slug, data, servicoId) =>
   api.get(`/public/${slug}/slots`, { params: { data, servicoId } }).then(r => r.data);
 export const criarAgendamento = (slug, data) => api.post(`/public/${slug}/agendamentos`, data).then(r => r.data);
+export const buscarAgendamentosPorTelefone = (slug, telefone) =>
+  api.get(`/public/${slug}/agendamentos`, { params: { telefone } }).then(r => r.data);
+export const cancelarAgendamentoPublico = (slug, id, telefone) =>
+  api.post(`/public/${slug}/agendamentos/${id}/cancelar`, { telefone }).then(r => r.data);

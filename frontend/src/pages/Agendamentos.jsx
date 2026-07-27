@@ -114,6 +114,8 @@ export default function Agendamentos() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [agendamentos, setAgendamentos] = useState([]);
   const [pagamentosMap, setPagamentosMap] = useState({});
+  const [sinalMap, setSinalMap] = useState({});
+  const [confirmandoSinal, setConfirmandoSinal] = useState(null);
   const [servicos, setServicos] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
   const [barbearia, setBarbearia] = useState(null);
@@ -151,8 +153,13 @@ export default function Agendamentos() {
       if (barb.status === 'fulfilled') setBarbearia(barb.value);
       if (pags.status === 'fulfilled') {
         const map = {};
-        pags.value.forEach(p => { map[p.agendamentoId] = p; });
+        const mapSinal = {};
+        pags.value.forEach(p => {
+          if (p.tipo === 'SINAL') mapSinal[p.agendamentoId] = p;
+          else map[p.agendamentoId] = p;
+        });
         setPagamentosMap(map);
+        setSinalMap(mapSinal);
       }
       const falhas = [ags, svcs, profs, barb, pags].filter(r => r.status === 'rejected');
       if (falhas.length > 0) {
@@ -225,6 +232,15 @@ export default function Agendamentos() {
       await api.atualizarStatus(id, status);
       setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     } catch { alert('Erro ao atualizar status'); }
+  }
+
+  async function handleConfirmarSinal(id) {
+    setConfirmandoSinal(id);
+    try {
+      const atualizado = await api.confirmarSinalDinheiro(id);
+      setSinalMap(prev => ({ ...prev, [id]: atualizado }));
+    } catch { alert('Erro ao confirmar sinal'); }
+    finally { setConfirmandoSinal(null); }
   }
 
   function abrirModalCancelar(ag) {
@@ -386,6 +402,7 @@ export default function Agendamentos() {
         <div className="space-y-2">
           {filtrados.map(ag => {
             const pag = pagamentosMap[ag.id];
+            const sinal = sinalMap[ag.id];
             const ativo = ag.status === 'PENDENTE' || ag.status === 'CONFIRMADO';
             const destacado = ag.id === destacadoId;
             return (
@@ -426,6 +443,27 @@ export default function Agendamentos() {
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${pag.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
                       {pag.status === 'PAGO' ? 'Pago' : 'Pag. pendente'}
                     </span>
+                  )}
+
+                  {/* status do sinal */}
+                  {sinal && (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                      sinal.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700'
+                        : sinal.status === 'REEMBOLSADO' ? 'bg-slate-200 text-slate-600'
+                        : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {sinal.status === 'PAGO' ? 'Sinal pago' : sinal.status === 'REEMBOLSADO' ? 'Sinal devolvido' : 'Sinal pendente'}
+                    </span>
+                  )}
+                  {sinal && sinal.metodo === 'DINHEIRO' && sinal.status === 'PENDENTE' && (
+                    <button
+                      onClick={() => handleConfirmarSinal(ag.id)}
+                      disabled={confirmandoSinal === ag.id}
+                      title="Confirmar recebimento do sinal em dinheiro"
+                      className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    >
+                      {confirmandoSinal === ag.id ? '...' : 'Confirmar sinal'}
+                    </button>
                   )}
 
                   {/* aceitar PENDENTE → CONFIRMADO */}
@@ -586,7 +624,7 @@ export default function Agendamentos() {
               <label className="block text-xs font-medium text-slate-700 mb-1">Método de pagamento</label>
               <select className="input" value={metodo} onChange={e => setMetodo(e.target.value)}>
                 <option value="DINHEIRO">Dinheiro</option>
-                <option value="PIX">PIX (via Pagar.me)</option>
+                <option value="PIX">PIX (via Mercado Pago)</option>
                 <option value="CARTAO_CREDITO">Cartão de Crédito</option>
                 <option value="CARTAO_DEBITO">Cartão de Débito</option>
               </select>
@@ -606,6 +644,13 @@ export default function Agendamentos() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
               PIX gerado! O agendamento será concluído automaticamente quando o pagamento for confirmado.
             </div>
+            {pixData.pixQrCodeBase64 && (
+              <img
+                src={`data:image/png;base64,${pixData.pixQrCodeBase64}`}
+                alt="QR Code Pix"
+                className="w-40 h-40 mx-auto"
+              />
+            )}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
               <textarea readOnly className="input font-mono text-xs" rows={4} value={pixData.pixCopiaECola} />

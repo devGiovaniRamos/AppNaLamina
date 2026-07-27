@@ -9,6 +9,7 @@ export const getBarbearia = () => api.get('/barbearia').then(r => r.data);
 export const atualizarPerfil = (data) => api.put('/barbearia/perfil', data).then(r => r.data);
 export const atualizarHorario = (data) => api.put('/barbearia/horario', data).then(r => r.data);
 export const atualizarTodosHorarios = (data) => api.put('/barbearia/horario/todos', data).then(r => r.data);
+export const atualizarConfigSinal = (data) => api.put('/barbearia/sinal', data).then(r => r.data);
 
 // Agendamentos
 export const listarAgendamentos = () => api.get('/agendamentos').then(r => r.data);
@@ -34,6 +35,7 @@ export const listarPagamentos = (params) => api.get('/pagamentos', { params }).t
 export const relatorioPagamentos = (params) => api.get('/pagamentos/relatorio', { params }).then(r => r.data);
 export const registrarPagamento = (agendamentoId, data) => api.post(`/agendamentos/${agendamentoId}/pagamentos`, data).then(r => r.data);
 export const buscarPagamento = (agendamentoId) => api.get(`/agendamentos/${agendamentoId}/pagamentos`).then(r => r.data);
+export const confirmarSinalDinheiro = (agendamentoId) => api.patch(`/agendamentos/${agendamentoId}/pagamentos/sinal/confirmar-dinheiro`).then(r => r.data);
 
 // Estoque (produtos)
 export const listarProdutos = (q) => api.get('/produtos', { params: q ? { q } : {} }).then(r => r.data);

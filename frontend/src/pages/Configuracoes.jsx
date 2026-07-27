@@ -9,13 +9,16 @@ export default function Configuracoes() {
   const [loading, setLoading] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoHorario, setSalvandoHorario] = useState(null);
+  const [salvandoSinal, setSalvandoSinal] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
+  const [erroSinal, setErroSinal] = useState('');
   const [linkCopiado, setLinkCopiado] = useState(false);
 
   const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '' });
   const [template, setTemplate] = useState({ horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: '' });
+  const [sinal, setSinal] = useState({ sinalObrigatorio: false, sinalPercentual: '', janelaCancelamentoHoras: 12 });
 
   useEffect(() => {
     api.getBarbearia().then(data => {
@@ -27,6 +30,11 @@ export default function Configuracoes() {
         cnpj: data.cnpj || '',
         endereco: data.endereco || '',
         descricao: data.descricao || '',
+      });
+      setSinal({
+        sinalObrigatorio: data.sinalObrigatorio || false,
+        sinalPercentual: data.sinalPercentual ?? '',
+        janelaCancelamentoHoras: data.janelaCancelamentoHoras ?? 12,
       });
     }).finally(() => setLoading(false));
   }, []);
@@ -61,6 +69,30 @@ export default function Configuracoes() {
       }));
     } catch { alert('Erro ao salvar horário'); }
     finally { setSalvandoHorario(null); }
+  }
+
+  async function handleSalvarSinal(e) {
+    e.preventDefault();
+    setErroSinal('');
+    if (sinal.sinalObrigatorio) {
+      const pct = Number(sinal.sinalPercentual);
+      if (!pct || pct <= 0 || pct > 100) {
+        setErroSinal('Informe um percentual entre 1 e 100');
+        return;
+      }
+    }
+    setSalvandoSinal(true);
+    try {
+      const atualizado = await api.atualizarConfigSinal({
+        sinalObrigatorio: sinal.sinalObrigatorio,
+        sinalPercentual: sinal.sinalObrigatorio ? Number(sinal.sinalPercentual) : null,
+        janelaCancelamentoHoras: Number(sinal.janelaCancelamentoHoras),
+      });
+      setBarbearia(atualizado);
+      mostrarSucesso('Configuração de sinal salva com sucesso!');
+    } catch (err) {
+      setErroSinal(err.response?.data?.message || 'Erro ao salvar configuração de sinal');
+    } finally { setSalvandoSinal(false); }
   }
 
   async function handleAplicarTemplate() {
@@ -137,6 +169,61 @@ export default function Configuracoes() {
           </div>
         </section>
       )}
+
+      {/* Sinal e Cancelamento */}
+      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Sinal e Cancelamento</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Exija um sinal (Pix ou Dinheiro) para confirmar agendamentos feitos pelo link público.
+          O aceite do agendamento continua sendo manual: você pode aceitar mesmo sem o sinal pago.
+        </p>
+        <form onSubmit={handleSalvarSinal} className="space-y-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sinal.sinalObrigatorio}
+              onChange={e => setSinal({ ...sinal, sinalObrigatorio: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm font-medium text-slate-700">Exigir sinal no agendamento online</span>
+          </label>
+
+          {sinal.sinalObrigatorio && (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Percentual do sinal (%)</label>
+              <input
+                type="number" min="1" max="100" step="1"
+                className="input w-32"
+                value={sinal.sinalPercentual}
+                onChange={e => setSinal({ ...sinal, sinalPercentual: e.target.value })}
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Janela de cancelamento com reembolso (horas)
+            </label>
+            <input
+              type="number" min="0" max="12" step="1"
+              className="input w-32"
+              value={sinal.janelaCancelamentoHoras}
+              onChange={e => setSinal({ ...sinal, janelaCancelamentoHoras: e.target.value })}
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Cliente cancelando com pelo menos esse número de horas de antecedência recebe o sinal de volta.
+              Cancelando depois disso, o sinal fica retido. Cancelamento feito por você sempre devolve o sinal.
+            </p>
+          </div>
+
+          {erroSinal && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{erroSinal}</p>}
+          <div className="flex justify-end">
+            <button type="submit" disabled={salvandoSinal} className="btn-primary">
+              {salvandoSinal ? 'Salvando...' : 'Salvar configuração'}
+            </button>
+          </div>
+        </form>
+      </section>
 
       {/* Perfil */}
       <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
