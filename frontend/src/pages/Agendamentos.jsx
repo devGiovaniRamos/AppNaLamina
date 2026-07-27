@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Calendar, CheckCircle2, XCircle, CreditCard, Clock, CheckCheck } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
@@ -10,6 +11,13 @@ const STATUS_COLOR = {
   CONCLUIDO: 'bg-green-100 text-green-800',
   CANCELADO: 'bg-gray-100 text-gray-500',
 };
+
+const FILTROS_STATUS = [
+  { value: 'TODOS', label: 'Todos' },
+  { value: 'PENDENTE', label: 'Pendentes' },
+  { value: 'CONFIRMADO', label: 'Confirmados' },
+  { value: 'CONCLUIDO', label: 'Concluídos' },
+];
 
 const hoje = new Date().toISOString().split('T')[0];
 const formVazio = { clienteNome: '', clienteTel: '', servicoIds: [], profissionalId: '', data: hoje, horaInicio: '', horaFim: '', observacao: '' };
@@ -24,6 +32,10 @@ function timeToMin(t) {
 
 function minToTime(min) {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+
+function fmtDataCurta(data) {
+  return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 function gerarSlots(horarioDia, duracao) {
@@ -99,12 +111,16 @@ function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect })
 }
 
 export default function Agendamentos() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [agendamentos, setAgendamentos] = useState([]);
   const [pagamentosMap, setPagamentosMap] = useState({});
   const [servicos, setServicos] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
   const [barbearia, setBarbearia] = useState(null);
   const [dataFiltro, setDataFiltro] = useState(hoje);
+  const [statusFiltro, setStatusFiltro] = useState('TODOS');
+  const [destacadoId, setDestacadoId] = useState(null);
+  const itemRefs = useRef({});
   const [loading, setLoading] = useState(true);
   const [modalNovo, setModalNovo] = useState(false);
   const [modalPagamento, setModalPagamento] = useState(null);
@@ -148,9 +164,35 @@ export default function Agendamentos() {
 
   useEffect(() => { carregarDados(); }, []);
 
+  // veio de um clique na notificação: abre direto no dia e destaca o agendamento
+  useEffect(() => {
+    const idParaAbrir = searchParams.get('agendamentoId');
+    if (!idParaAbrir || agendamentos.length === 0) return;
+    const ag = agendamentos.find(a => a.id === idParaAbrir);
+    if (ag) {
+      setDataFiltro(ag.data);
+      setStatusFiltro('TODOS');
+      setDestacadoId(ag.id);
+    }
+    setSearchParams({}, { replace: true });
+  }, [agendamentos, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!destacadoId) return;
+    itemRefs.current[destacadoId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setDestacadoId(null), 3000);
+    return () => clearTimeout(t);
+  }, [destacadoId]);
+
+  // pendente precisa de ação do barbeiro independente do dia, então ignora o filtro de data
+  const ignorarData = statusFiltro === 'PENDENTE';
+
   const filtrados = agendamentos
-    .filter(a => a.data === dataFiltro)
-    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+    .filter(a => ignorarData || a.data === dataFiltro)
+    .filter(a => statusFiltro === 'TODOS' || a.status === statusFiltro)
+    .sort((a, b) => ignorarData
+      ? `${a.data}${a.horaInicio}`.localeCompare(`${b.data}${b.horaInicio}`)
+      : a.horaInicio.localeCompare(b.horaInicio));
 
   // duração total dos serviços selecionados (soma de todos)
   const duracaoTotal = useMemo(
@@ -290,7 +332,9 @@ export default function Agendamentos() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Agendamentos</h1>
-          <p className="text-slate-500 text-sm mt-1">{filtrados.length} agendamento(s) no dia</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {filtrados.length} agendamento(s) {ignorarData ? 'pendente(s) (todas as datas)' : 'no dia'}
+          </p>
         </div>
         <button
           onClick={() => { setForm(formVazio); setError(''); setModalNovo(true); }}
@@ -307,10 +351,31 @@ export default function Agendamentos() {
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-5">
-        <Calendar size={16} className="text-slate-400" />
-        <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Calendar size={16} className="text-slate-400" />
+          <input
+            type="date"
+            value={dataFiltro}
+            onChange={e => setDataFiltro(e.target.value)}
+            disabled={ignorarData}
+            title={ignorarData ? 'Pendentes mostra todas as datas' : undefined}
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          {FILTROS_STATUS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setStatusFiltro(f.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                statusFiltro === f.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -322,10 +387,18 @@ export default function Agendamentos() {
           {filtrados.map(ag => {
             const pag = pagamentosMap[ag.id];
             const ativo = ag.status === 'PENDENTE' || ag.status === 'CONFIRMADO';
+            const destacado = ag.id === destacadoId;
             return (
-              <div key={ag.id} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+              <div
+                key={ag.id}
+                ref={el => { itemRefs.current[ag.id] = el; }}
+                className={`bg-white rounded-xl border p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow ${
+                  destacado ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-100'
+                }`}
+              >
                 <div className="flex items-center gap-4">
                   <div className="text-center w-14">
+                    {ignorarData && <p className="text-[10px] font-medium text-blue-500 mb-0.5">{fmtDataCurta(ag.data)}</p>}
                     <p className="font-semibold text-slate-800 text-sm">{ag.horaInicio}</p>
                     <p className="text-xs text-slate-400">{ag.horaFim}</p>
                   </div>

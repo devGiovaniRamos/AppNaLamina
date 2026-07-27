@@ -29,6 +29,7 @@ public class AgendamentoService {
     private final ProfissionalRepository profissionalRepository;
     private final PagamentoRepository pagamentoRepository;
     private final PontuacaoService pontuacaoService;
+    private final NotificacaoAdminService notificacaoAdminService;
 
     @Transactional(readOnly = true)
     public List<AgendamentoResponse> listar() {
@@ -45,7 +46,9 @@ public class AgendamentoService {
 
     @Transactional
     public AgendamentoResponse criarPublico(UUID tenantId, AgendamentoRequest request) {
-        return criarAgendamento(tenantId, request);
+        AgendamentoResponse response = criarAgendamento(tenantId, request);
+        notificacaoAdminService.notificarNovoAgendamento(tenantId, response);
+        return response;
     }
 
     private AgendamentoResponse criarAgendamento(UUID tenantId, AgendamentoRequest request) {

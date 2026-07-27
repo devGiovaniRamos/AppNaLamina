@@ -18,6 +18,7 @@ public class BarbeariaResponse {
     private String email;
     private String endereco;
     private String descricao;
+    private String slug;
     private List<HorarioResponse> horarios;
 
     @Data

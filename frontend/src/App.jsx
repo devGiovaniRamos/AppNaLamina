@@ -11,6 +11,7 @@ import Venda from './pages/Venda';
 import Campeonato from './pages/Campeonato';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
+import Agendar from './pages/public/Agendar';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/agendar/:slug" element={<Agendar />} />
           <Route
             path="/"
             element={

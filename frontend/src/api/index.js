@@ -50,6 +50,12 @@ export const buscarVenda = (id) => api.get(`/vendas/${id}`).then(r => r.data);
 export const criarVenda = (data) => api.post('/vendas', data).then(r => r.data);
 export const cancelarVenda = (id, motivo) => api.delete(`/vendas/${id}`, { data: { motivo } }).then(r => r.data);
 
+// Notificações (admin)
+export const listarNotificacoes = () => api.get('/notificacoes').then(r => r.data);
+export const contarNotificacoesNaoLidas = () => api.get('/notificacoes/contagem').then(r => r.data);
+export const marcarNotificacaoLida = (id) => api.post(`/notificacoes/${id}/lida`).then(r => r.data);
+export const marcarTodasNotificacoesLidas = () => api.post('/notificacoes/marcar-todas-lidas').then(r => r.data);
+
 // Campeonato (gamificação)
 export const iniciarCampeonato = (data) => api.post('/campeonatos', data).then(r => r.data);
 export const buscarCampeonatoAtivo = () => api.get('/campeonatos/ativo').then(r => r.data);

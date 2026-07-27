@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Trophy, Settings, LogOut } from 'lucide-react';
+import NotificacaoSino from './NotificacaoSino';
 
 const navItems = [
   { to: '/agendamentos', icon: Calendar, label: 'Agendamentos' },
@@ -57,8 +58,13 @@ export default function Layout() {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto">
-        <Outlet />
+      <main className="flex-1 overflow-auto flex flex-col">
+        <header className="flex items-center justify-end px-6 py-2.5 bg-white border-b border-slate-100 shrink-0">
+          <NotificacaoSino />
+        </header>
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
