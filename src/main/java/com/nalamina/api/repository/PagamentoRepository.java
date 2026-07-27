@@ -18,7 +18,7 @@ public interface PagamentoRepository extends JpaRepository<PagamentoEntity, UUID
 
     boolean existsByAgendamentoEntity_Id(UUID agendamentoId);
 
-    Optional<PagamentoEntity> findByPagarmeChargeId(String pagarmeChargeId);
+    Optional<PagamentoEntity> findByMercadoPagoPaymentId(String mercadoPagoPaymentId);
 
     @Query("SELECT DISTINCT p FROM PagamentoEntity p " +
            "JOIN FETCH p.agendamentoEntity a " +

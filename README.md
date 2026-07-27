@@ -486,7 +486,7 @@ https://nalamina.com.br/agendar/{tenantId}
 - [x] Slots disponíveis baseados no horário de funcionamento
 - [x] Pagamentos com cálculo de taxa percentual
 - [x] Endpoints públicos para agendamento sem login
-- [ ] Integração Pagar.me (PIX gerado + webhook)
+- [x] Integração Mercado Pago (PIX gerado + webhook)
 - [ ] Notificações push (Firebase FCM)
 - [ ] Cupons de desconto
 - [ ] Programa de pontuação / fidelidade

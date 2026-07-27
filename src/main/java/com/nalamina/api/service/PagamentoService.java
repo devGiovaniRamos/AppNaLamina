@@ -40,7 +40,7 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
-    private final PagarmeService pagarmeService;
+    private final MercadoPagoService mercadoPagoService;
     private final PontuacaoService pontuacaoService;
 
     private BigDecimal calcularTaxa(BigDecimal valorServico, BigDecimal taxaPct) {
@@ -81,11 +81,12 @@ public class PagamentoService {
                 .metodo(request.getMetodo());
 
         if (request.getMetodo() == MetodoPagamento.PIX) {
-            PagarmeService.PagarmePixResult pix = pagarmeService.criarCobrancaPix(
-                    agendamento.getClienteNome(), valorTotal, agendamentoId);
+            MercadoPagoService.MercadoPagoPixResult pix = mercadoPagoService.criarPagamentoPix(
+                    agendamento.getClienteNome(), agendamento.getClienteTel(), valorTotal, agendamentoId);
             builder.status(StatusPagamento.PENDENTE)
-                   .pagarmeChargeId(pix.chargeId())
+                   .mercadoPagoPaymentId(pix.paymentId())
                    .pixCopiaECola(pix.pixCopiaECola())
+                   .pixQrCodeBase64(pix.qrCodeBase64())
                    .pixExpiraEm(pix.pixExpiraEm());
         } else {
             builder.status(StatusPagamento.PAGO)
@@ -178,8 +179,8 @@ public class PagamentoService {
     }
 
     @Transactional
-    public void confirmarPagamento(String pagarmeChargeId) {
-        PagamentoEntity pagamento = pagamentoRepository.findByPagarmeChargeId(pagarmeChargeId)
+    public void confirmarPagamento(String mercadoPagoPaymentId) {
+        PagamentoEntity pagamento = pagamentoRepository.findByMercadoPagoPaymentId(mercadoPagoPaymentId)
                 .orElse(null);
         if (pagamento == null || pagamento.getStatus() == StatusPagamento.PAGO) return;
 
@@ -217,6 +218,7 @@ public class PagamentoService {
                 .pagoEm(p.getPagoEm())
                 .criadoEm(p.getCriadoEm())
                 .pixCopiaECola(p.getPixCopiaECola())
+                .pixQrCodeBase64(p.getPixQrCodeBase64())
                 .pixExpiraEm(p.getPixExpiraEm())
                 .build();
     }

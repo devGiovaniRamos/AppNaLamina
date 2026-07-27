@@ -35,8 +35,8 @@ public class AssinaturaClienteEntity {
     @Column(nullable = false, length = 20)
     private StatusAssinatura status;
 
-    @Column(name = "pagarme_subscription_id", unique = true, length = 100)
-    private String pagarmeSubscriptionId;
+    @Column(name = "mercado_pago_subscription_id", unique = true, length = 100)
+    private String mercadoPagoSubscriptionId;
 
     @Column(nullable = false)
     private LocalDate inicio;
