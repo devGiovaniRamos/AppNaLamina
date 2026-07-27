@@ -63,6 +63,7 @@ public class PublicController {
                 .telefone(tenant.getTelefone())
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
+                .mensagemBoasVindas(tenant.getMensagemBoasVindas())
                 .sinalObrigatorio(tenant.getSinalObrigatorio())
                 .sinalPercentual(tenant.getSinalPercentual())
                 .janelaCancelamentoHoras(tenant.getJanelaCancelamentoHoras())

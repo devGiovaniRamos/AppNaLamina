@@ -49,6 +49,7 @@ public class TenantService {
         tenant.setEmail(request.getEmail());
         tenant.setEndereco(request.getEndereco());
         tenant.setDescricao(request.getDescricao());
+        tenant.setMensagemBoasVindas(request.getMensagemBoasVindas());
         tenantRepository.save(tenant);
 
         List<HorarioFuncionamentoEntity> horarios = horarioRepository
@@ -117,6 +118,7 @@ public class TenantService {
                 .email(tenant.getEmail())
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
+                .mensagemBoasVindas(tenant.getMensagemBoasVindas())
                 .slug(tenant.getSlug())
                 .sinalObrigatorio(tenant.getSinalObrigatorio())
                 .sinalPercentual(tenant.getSinalPercentual())

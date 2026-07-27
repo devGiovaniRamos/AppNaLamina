@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, Copy, Check, Search, XCircle } from 'lucide-react';
+import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, Copy, Check, XCircle } from 'lucide-react';
 import * as api from '../../api/public';
 
 const hoje = new Date().toISOString().split('T')[0];
@@ -8,6 +8,8 @@ const hoje = new Date().toISOString().split('T')[0];
 const fmt = (v) => `R$ ${Number(v || 0).toFixed(2)}`;
 const fmtHora = (h) => h ? h.slice(0, 5) : '';
 const fmtDataExibicao = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '';
+
+const ETAPAS_PROGRESSO = ['identificar', 'servico', 'profissional', 'horario', 'confirmar'];
 
 function TermosDeUso({ percentual, janela }) {
   return (
@@ -27,35 +29,17 @@ function TermosDeUso({ percentual, janela }) {
   );
 }
 
-function BuscaAgendamentos({ slug, onVoltar }) {
-  const [telefone, setTelefone] = useState('');
-  const [buscando, setBuscando] = useState(false);
-  const [buscou, setBuscou] = useState(false);
-  const [resultados, setResultados] = useState([]);
-  const [erroBusca, setErroBusca] = useState('');
+function MeusAgendamentos({ slug, telefone, agendamentos, setAgendamentos, onAgendarNovo }) {
   const [modalCancelar, setModalCancelar] = useState(null);
   const [cancelando, setCancelando] = useState(false);
   const [erroCancelar, setErroCancelar] = useState('');
-
-  async function buscar(e) {
-    e.preventDefault();
-    setBuscando(true);
-    setErroBusca('');
-    try {
-      const dados = await api.buscarAgendamentosPorTelefone(slug, telefone);
-      setResultados(dados);
-      setBuscou(true);
-    } catch {
-      setErroBusca('Não foi possível buscar. Tente novamente.');
-    } finally { setBuscando(false); }
-  }
 
   async function confirmarCancelamento() {
     setCancelando(true);
     setErroCancelar('');
     try {
       await api.cancelarAgendamentoPublico(slug, modalCancelar.agendamento.id, telefone);
-      setResultados(prev => prev.filter(r => r.agendamento.id !== modalCancelar.agendamento.id));
+      setAgendamentos(prev => prev.filter(r => r.agendamento.id !== modalCancelar.agendamento.id));
       setModalCancelar(null);
     } catch {
       setErroCancelar('Não foi possível cancelar. Tente novamente ou entre em contato com a barbearia.');
@@ -64,30 +48,10 @@ function BuscaAgendamentos({ slug, onVoltar }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onVoltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-        <ChevronLeft size={16} /> Voltar
-      </button>
-
-      <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Search size={16} /> Consultar agendamento</h2>
-
-      <form onSubmit={buscar} className="flex gap-2">
-        <input
-          className="input flex-1" required placeholder="(21) 99999-9999"
-          value={telefone} onChange={e => setTelefone(e.target.value)}
-        />
-        <button type="submit" disabled={buscando} className="btn-primary shrink-0 disabled:opacity-50">
-          {buscando ? 'Buscando...' : 'Buscar'}
-        </button>
-      </form>
-
-      {erroBusca && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroBusca}</p>}
-
-      {buscou && resultados.length === 0 && !erroBusca && (
-        <p className="text-slate-400 text-sm text-center py-8">Nenhum agendamento futuro encontrado para esse telefone.</p>
-      )}
+      <h2 className="font-semibold text-slate-800">Você já tem agendamento marcado</h2>
 
       <div className="space-y-3">
-        {resultados.map(r => {
+        {agendamentos.map(r => {
           const ag = r.agendamento;
           return (
             <div key={ag.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
@@ -104,7 +68,14 @@ function BuscaAgendamentos({ slug, onVoltar }) {
             </div>
           );
         })}
+        {agendamentos.length === 0 && (
+          <p className="text-slate-400 text-sm text-center py-4">Nenhum agendamento ativo no momento.</p>
+        )}
       </div>
+
+      <button onClick={onAgendarNovo} className="btn-primary w-full">
+        Agendar mais um horário
+      </button>
 
       {modalCancelar && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -140,8 +111,9 @@ export default function Agendar() {
   const [carregandoBarbearia, setCarregandoBarbearia] = useState(true);
   const [barbeariaNaoEncontrada, setBarbeariaNaoEncontrada] = useState(false);
 
-  const [modo, setModo] = useState('agendar');
-  const [step, setStep] = useState(1);
+  const [etapa, setEtapa] = useState('identificar');
+  const [verificando, setVerificando] = useState(false);
+  const [agendamentosExistentes, setAgendamentosExistentes] = useState([]);
 
   const [servicos, setServicos] = useState([]);
   const [servico, setServico] = useState(null);
@@ -190,19 +162,41 @@ export default function Agendar() {
     return (servico.preco * barbearia.sinalPercentual) / 100;
   }, [servico, barbearia]);
 
+  async function handleIdentificar(e) {
+    e.preventDefault();
+    setVerificando(true);
+    setErro('');
+    try {
+      const encontrados = await api.buscarAgendamentosPorTelefone(slug, clienteTel);
+      if (encontrados.length > 0) {
+        setAgendamentosExistentes(encontrados);
+        setEtapa('meusAgendamentos');
+      } else {
+        setEtapa('servico');
+      }
+    } catch {
+      // se a busca falhar, não bloqueia o cliente de agendar
+      setEtapa('servico');
+    } finally { setVerificando(false); }
+  }
+
   function escolherServico(s) {
     setServico(s);
-    setStep(2);
+    setEtapa('profissional');
   }
 
   function escolherProfissional(p) {
     setProfissional(p);
-    setStep(3);
+    setEtapa('horario');
   }
 
   function voltar() {
     setErro('');
-    setStep(s => Math.max(1, s - 1));
+    if (etapa === 'meusAgendamentos') setEtapa('identificar');
+    else if (etapa === 'servico') setEtapa(agendamentosExistentes.length > 0 ? 'meusAgendamentos' : 'identificar');
+    else if (etapa === 'profissional') setEtapa('servico');
+    else if (etapa === 'horario') setEtapa('profissional');
+    else if (etapa === 'confirmar') setEtapa('horario');
   }
 
   async function confirmar(e) {
@@ -309,6 +303,8 @@ export default function Agendar() {
     );
   }
 
+  const indiceProgresso = ETAPAS_PROGRESSO.indexOf(etapa);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-100 px-6 py-5">
@@ -324,169 +320,182 @@ export default function Agendar() {
       </header>
 
       <div className="max-w-md mx-auto p-4">
-        {modo === 'buscar' ? (
-          <BuscaAgendamentos slug={slug} onVoltar={() => setModo('agendar')} />
-        ) : (
-          <>
-            <div className="flex items-center gap-1.5 mb-3 px-1">
-              {[1, 2, 3, 4].map(n => (
-                <div key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-blue-600' : 'bg-slate-200'}`} />
-              ))}
+        {indiceProgresso >= 0 && (
+          <div className="flex items-center gap-1.5 mb-3 px-1">
+            {ETAPAS_PROGRESSO.map((_, n) => (
+              <div key={n} className={`h-1 flex-1 rounded-full ${n <= indiceProgresso ? 'bg-blue-600' : 'bg-slate-200'}`} />
+            ))}
+          </div>
+        )}
+
+        {etapa !== 'identificar' && (
+          <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
+            <ChevronLeft size={16} /> Voltar
+          </button>
+        )}
+
+        {etapa === 'identificar' && (
+          <form onSubmit={handleIdentificar} className="space-y-4">
+            {barbearia?.mensagemBoasVindas && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
+                {barbearia.mensagemBoasVindas}
+              </div>
+            )}
+            <h2 className="font-semibold text-slate-800">Para começar, informe seus dados</h2>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+              <input className="input" required value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <input className="input" required placeholder="(21) 99999-9999" value={clienteTel} onChange={e => setClienteTel(e.target.value)} />
+            </div>
+            {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
+            <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
+              {verificando ? 'Verificando...' : 'Continuar'}
+            </button>
+          </form>
+        )}
+
+        {etapa === 'meusAgendamentos' && (
+          <MeusAgendamentos
+            slug={slug}
+            telefone={clienteTel}
+            agendamentos={agendamentosExistentes}
+            setAgendamentos={setAgendamentosExistentes}
+            onAgendarNovo={() => setEtapa('servico')}
+          />
+        )}
+
+        {etapa === 'servico' && (
+          <div className="space-y-3">
+            <h2 className="font-semibold text-slate-800 mb-2">Escolha o serviço</h2>
+            {servicos.map(s => (
+              <button key={s.id} onClick={() => escolherServico(s)}
+                className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-800">{s.nome}</span>
+                  <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
+                </div>
+                {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
+                <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
+              </button>
+            ))}
+            {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+          </div>
+        )}
+
+        {etapa === 'profissional' && (
+          <div className="space-y-3">
+            <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
+            <button onClick={() => escolherProfissional(null)}
+              className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors font-medium text-slate-700">
+              Sem preferência
+            </button>
+            {profissionais.map(p => (
+              <button key={p.id} onClick={() => escolherProfissional(p)}
+                className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors flex items-center gap-3">
+                {p.fotoUrl ? (
+                  <img src={p.fotoUrl} alt={p.nome} className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User size={18} /></div>
+                )}
+                <span className="font-medium text-slate-800">{p.nome}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {etapa === 'horario' && (
+          <div className="space-y-4">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
+            <input type="date" min={hoje} value={data} onChange={e => setData(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+            {carregandoSlots ? (
+              <p className="text-slate-400 text-sm text-center py-6">Buscando horários...</p>
+            ) : slots.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {slots.map(s => (
+                  <button key={s.horaInicio}
+                    onClick={() => setSlot(s)}
+                    className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                      slot?.horaInicio === s.horaInicio
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                    }`}>
+                    {fmtHora(s.horaInicio)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button disabled={!slot} onClick={() => setEtapa('confirmar')}
+              className="btn-primary w-full disabled:opacity-50">
+              Continuar
+            </button>
+          </div>
+        )}
+
+        {etapa === 'confirmar' && (
+          <form onSubmit={confirmar} className="space-y-4">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Clock size={16} /> Confirme seu agendamento</h2>
+
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-sm space-y-1">
+              <p><span className="text-slate-400">Nome:</span> {clienteNome}</p>
+              <p><span className="text-slate-400">Serviço:</span> {servico.nome}</p>
+              <p><span className="text-slate-400">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
+              <p><span className="text-slate-400">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
+              {profissional && <p><span className="text-slate-400">Profissional:</span> {profissional.nome}</p>}
             </div>
 
-            {step === 1 && (
-              <button
-                onClick={() => setModo('buscar')}
-                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium mb-3"
-              >
-                <Search size={14} /> Já tem um agendamento? Consultar ou cancelar
-              </button>
-            )}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Observação (opcional)</label>
+              <textarea className="input" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} />
+            </div>
 
-            {step > 1 && (
-              <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
-                <ChevronLeft size={16} /> Voltar
-              </button>
-            )}
-
-            {step === 1 && (
-              <div className="space-y-3">
-                <h2 className="font-semibold text-slate-800 mb-2">Escolha o serviço</h2>
-                {servicos.map(s => (
-                  <button key={s.id} onClick={() => escolherServico(s)}
-                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">{s.nome}</span>
-                      <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
-                    </div>
-                    {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
-                    <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
-                  </button>
-                ))}
-                {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+            {barbearia?.sinalObrigatorio && (
+              <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-800">
+                  Sinal para confirmar: {fmt(valorSinal)}
+                </p>
+                <div className="flex gap-2">
+                  {['PIX', 'DINHEIRO'].map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMetodoSinal(m)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        metodoSinal === m
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {m === 'PIX' ? 'Pix' : 'Dinheiro'}
+                    </button>
+                  ))}
+                </div>
+                <TermosDeUso percentual={barbearia.sinalPercentual} janela={barbearia.janelaCancelamentoHoras} />
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={termosAceitos}
+                    onChange={e => setTermosAceitos(e.target.checked)}
+                    className="rounded mt-0.5"
+                  />
+                  <span className="text-xs text-slate-600">Li e concordo com os termos de uso e a política de cancelamento.</span>
+                </label>
               </div>
             )}
 
-            {step === 2 && (
-              <div className="space-y-3">
-                <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
-                <button onClick={() => escolherProfissional(null)}
-                  className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors font-medium text-slate-700">
-                  Sem preferência
-                </button>
-                {profissionais.map(p => (
-                  <button key={p.id} onClick={() => escolherProfissional(p)}
-                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors flex items-center gap-3">
-                    {p.fotoUrl ? (
-                      <img src={p.fotoUrl} alt={p.nome} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User size={18} /></div>
-                    )}
-                    <span className="font-medium text-slate-800">{p.nome}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
 
-            {step === 3 && (
-              <div className="space-y-4">
-                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
-                <input type="date" min={hoje} value={data} onChange={e => setData(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
-                {carregandoSlots ? (
-                  <p className="text-slate-400 text-sm text-center py-6">Buscando horários...</p>
-                ) : slots.length === 0 ? (
-                  <p className="text-slate-400 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {slots.map(s => (
-                      <button key={s.horaInicio}
-                        onClick={() => setSlot(s)}
-                        className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                          slot?.horaInicio === s.horaInicio
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
-                        }`}>
-                        {fmtHora(s.horaInicio)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <button disabled={!slot} onClick={() => setStep(4)}
-                  className="btn-primary w-full disabled:opacity-50">
-                  Continuar
-                </button>
-              </div>
-            )}
-
-            {step === 4 && (
-              <form onSubmit={confirmar} className="space-y-4">
-                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Clock size={16} /> Seus dados</h2>
-
-                <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-sm space-y-1">
-                  <p><span className="text-slate-400">Serviço:</span> {servico.nome}</p>
-                  <p><span className="text-slate-400">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
-                  <p><span className="text-slate-400">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
-                  {profissional && <p><span className="text-slate-400">Profissional:</span> {profissional.nome}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
-                  <input className="input" required value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
-                  <input className="input" required placeholder="(21) 99999-9999" value={clienteTel} onChange={e => setClienteTel(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Observação (opcional)</label>
-                  <textarea className="input" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} />
-                </div>
-
-                {barbearia?.sinalObrigatorio && (
-                  <div className="bg-blue-50 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-semibold text-slate-800">
-                      Sinal para confirmar: {fmt(valorSinal)}
-                    </p>
-                    <div className="flex gap-2">
-                      {['PIX', 'DINHEIRO'].map(m => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setMetodoSinal(m)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                            metodoSinal === m
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-slate-700 border-slate-200'
-                          }`}
-                        >
-                          {m === 'PIX' ? 'Pix' : 'Dinheiro'}
-                        </button>
-                      ))}
-                    </div>
-                    <TermosDeUso percentual={barbearia.sinalPercentual} janela={barbearia.janelaCancelamentoHoras} />
-                    <label className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={termosAceitos}
-                        onChange={e => setTermosAceitos(e.target.checked)}
-                        className="rounded mt-0.5"
-                      />
-                      <span className="text-xs text-slate-600">Li e concordo com os termos de uso e a política de cancelamento.</span>
-                    </label>
-                  </div>
-                )}
-
-                {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
-
-                <button type="submit" disabled={enviando} className="btn-primary w-full disabled:opacity-50">
-                  {enviando ? 'Confirmando...' : 'Confirmar agendamento'}
-                </button>
-              </form>
-            )}
-          </>
+            <button type="submit" disabled={enviando} className="btn-primary w-full disabled:opacity-50">
+              {enviando ? 'Confirmando...' : 'Confirmar agendamento'}
+            </button>
+          </form>
         )}
       </div>
     </div>

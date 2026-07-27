@@ -37,6 +37,9 @@ public class TenantEntity implements Persistable<UUID> {
     @Column(columnDefinition = "TEXT")
     private String descricao;
 
+    @Column(name = "mensagem_boas_vindas", columnDefinition = "TEXT")
+    private String mensagemBoasVindas;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;

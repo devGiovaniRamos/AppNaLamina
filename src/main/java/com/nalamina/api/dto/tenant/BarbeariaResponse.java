@@ -19,6 +19,7 @@ public class BarbeariaResponse {
     private String email;
     private String endereco;
     private String descricao;
+    private String mensagemBoasVindas;
     private String slug;
     private Boolean sinalObrigatorio;
     private BigDecimal sinalPercentual;

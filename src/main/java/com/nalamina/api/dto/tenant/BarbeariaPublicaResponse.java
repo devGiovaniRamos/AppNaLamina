@@ -12,6 +12,7 @@ public class BarbeariaPublicaResponse {
     private String telefone;
     private String endereco;
     private String descricao;
+    private String mensagemBoasVindas;
     private Boolean sinalObrigatorio;
     private BigDecimal sinalPercentual;
     private Integer janelaCancelamentoHoras;

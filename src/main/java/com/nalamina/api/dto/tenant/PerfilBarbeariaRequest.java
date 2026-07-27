@@ -21,4 +21,6 @@ public class PerfilBarbeariaRequest {
     private String endereco;
 
     private String descricao;
+
+    private String mensagemBoasVindas;
 }

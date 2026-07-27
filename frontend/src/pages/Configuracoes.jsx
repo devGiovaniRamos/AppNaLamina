@@ -16,7 +16,7 @@ export default function Configuracoes() {
   const [erroSinal, setErroSinal] = useState('');
   const [linkCopiado, setLinkCopiado] = useState(false);
 
-  const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '' });
+  const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '', mensagemBoasVindas: '' });
   const [template, setTemplate] = useState({ horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: '' });
   const [sinal, setSinal] = useState({ sinalObrigatorio: false, sinalPercentual: '', janelaCancelamentoHoras: 12 });
 
@@ -30,6 +30,7 @@ export default function Configuracoes() {
         cnpj: data.cnpj || '',
         endereco: data.endereco || '',
         descricao: data.descricao || '',
+        mensagemBoasVindas: data.mensagemBoasVindas || '',
       });
       setSinal({
         sinalObrigatorio: data.sinalObrigatorio || false,
@@ -254,6 +255,15 @@ export default function Configuracoes() {
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Descrição</label>
             <textarea className="input" rows={3} value={perfil.descricao} onChange={e => setPerfil({ ...perfil, descricao: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Mensagem personalizada (opcional)</label>
+            <p className="text-xs text-slate-400 mb-1">Exibida para o cliente ao abrir o link de agendamento.</p>
+            <textarea
+              className="input" rows={2} placeholder="Ex: Seja bem-vindo! Chegue com 10 minutos de antecedência."
+              value={perfil.mensagemBoasVindas}
+              onChange={e => setPerfil({ ...perfil, mensagemBoasVindas: e.target.value })}
+            />
           </div>
           {erro && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{erro}</p>}
           <div className="flex justify-end">
