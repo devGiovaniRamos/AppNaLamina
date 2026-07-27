@@ -70,6 +70,11 @@ public class PagamentoService {
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(agendamentoId, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
+        if (agendamento.getStatus() != StatusAgendamento.CONFIRMADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Agendamento precisa estar confirmado para registrar pagamento (status atual: " + agendamento.getStatus() + ")");
+        }
+
         if (pagamentoRepository.existsByAgendamentoEntity_IdAndTipo(agendamentoId, TipoPagamento.TOTAL)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento já possui pagamento registrado");
         }
@@ -150,8 +155,12 @@ public class PagamentoService {
     public PagamentoResponse confirmarSinalDinheiro(UUID agendamentoId) {
         UUID tenantId = TenantContextHolder.getTenantId();
 
-        agendamentoRepository.findByIdAndTenantEntity_Id(agendamentoId, tenantId)
+        AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(agendamentoId, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
+
+        if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento está cancelado");
+        }
 
         PagamentoEntity pagamento = pagamentoRepository.findByAgendamentoEntity_IdAndTipo(agendamentoId, TipoPagamento.SINAL)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sinal não encontrado"));

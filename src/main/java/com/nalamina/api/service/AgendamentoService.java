@@ -129,6 +129,11 @@ public class AgendamentoService {
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(id, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
+        if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Agendamento está cancelado e não pode ter o status alterado");
+        }
+
         agendamento.setStatus(request.getStatus());
         return toResponse(agendamentoRepository.save(agendamento));
     }
@@ -139,6 +144,10 @@ public class AgendamentoService {
 
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(id, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
+
+        if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento já está cancelado");
+        }
 
         cancelarInterno(agendamento, motivo, false);
     }

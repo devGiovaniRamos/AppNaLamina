@@ -231,7 +231,10 @@ export default function Agendamentos() {
     try {
       await api.atualizarStatus(id, status);
       setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-    } catch { alert('Erro ao atualizar status'); }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Erro ao atualizar status');
+      carregarDados();
+    }
   }
 
   async function handleConfirmarSinal(id) {
@@ -239,8 +242,10 @@ export default function Agendamentos() {
     try {
       const atualizado = await api.confirmarSinalDinheiro(id);
       setSinalMap(prev => ({ ...prev, [id]: atualizado }));
-    } catch { alert('Erro ao confirmar sinal'); }
-    finally { setConfirmandoSinal(null); }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Erro ao confirmar sinal');
+      carregarDados();
+    } finally { setConfirmandoSinal(null); }
   }
 
   function abrirModalCancelar(ag) {
@@ -266,8 +271,11 @@ export default function Agendamentos() {
         return resto;
       });
       fecharModalCancelar();
-    } catch { alert('Erro ao cancelar'); }
-    finally { setCancelando(false); }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Erro ao cancelar');
+      fecharModalCancelar();
+      carregarDados();
+    } finally { setCancelando(false); }
   }
 
   function toggleServico(servicoId) {
@@ -321,6 +329,8 @@ export default function Agendamentos() {
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Erro ao registrar pagamento');
+      fecharPagamento();
+      carregarDados();
     } finally { setSaving(false); }
   }
 
