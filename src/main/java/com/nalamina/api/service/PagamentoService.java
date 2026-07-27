@@ -41,6 +41,7 @@ public class PagamentoService {
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
     private final MercadoPagoService mercadoPagoService;
+    private final MercadoPagoOAuthService mercadoPagoOAuthService;
     private final PontuacaoService pontuacaoService;
 
     private BigDecimal calcularTaxa(BigDecimal valorServico, BigDecimal taxaPct) {
@@ -81,8 +82,9 @@ public class PagamentoService {
                 .metodo(request.getMetodo());
 
         if (request.getMetodo() == MetodoPagamento.PIX) {
+            String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
             MercadoPagoService.MercadoPagoPixResult pix = mercadoPagoService.criarPagamentoPix(
-                    agendamento.getClienteNome(), agendamento.getClienteTel(), valorTotal, agendamentoId);
+                    accessToken, agendamento.getClienteNome(), agendamento.getClienteTel(), valorTotal, agendamentoId);
             builder.status(StatusPagamento.PENDENTE)
                    .mercadoPagoPaymentId(pix.paymentId())
                    .pixCopiaECola(pix.pixCopiaECola())
@@ -176,6 +178,25 @@ public class PagamentoService {
                 .ticketMedio(ticketMedio)
                 .porMetodo(porMetodo)
                 .build();
+    }
+
+    /**
+     * Ponto de entrada do webhook do Mercado Pago: localiza o pagamento pelo id recebido, usa o
+     * access token da própria barbearia (dona daquele pagamento) para confirmar o status real na API
+     * antes de dar baixa — nunca confia apenas no corpo da notificação.
+     */
+    @Transactional
+    public void processarWebhookMercadoPago(String mercadoPagoPaymentId) {
+        PagamentoEntity pagamento = pagamentoRepository.findByMercadoPagoPaymentId(mercadoPagoPaymentId)
+                .orElse(null);
+        if (pagamento == null || pagamento.getStatus() == StatusPagamento.PAGO) return;
+
+        TenantEntity tenant = pagamento.getAgendamentoEntity().getTenantEntity();
+        String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
+        String status = mercadoPagoService.consultarStatus(accessToken, mercadoPagoPaymentId);
+        if (!"approved".equals(status)) return;
+
+        confirmarPagamento(mercadoPagoPaymentId);
     }
 
     @Transactional

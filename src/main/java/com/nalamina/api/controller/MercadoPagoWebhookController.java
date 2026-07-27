@@ -40,11 +40,8 @@ public class MercadoPagoWebhookController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            String status = mercadoPagoService.consultarStatus(paymentId);
-            if ("approved".equals(status)) {
-                pagamentoService.confirmarPagamento(paymentId);
-                log.info("Pagamento PIX confirmado via webhook Mercado Pago: {}", paymentId);
-            }
+            pagamentoService.processarWebhookMercadoPago(paymentId);
+            log.info("Webhook Mercado Pago processado para pagamento {}", paymentId);
         } catch (Exception e) {
             log.error("Erro ao processar webhook Mercado Pago: {}", e.getMessage());
         }

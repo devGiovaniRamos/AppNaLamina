@@ -19,6 +19,7 @@ public class BarbeariaResponse {
     private String endereco;
     private String descricao;
     private String slug;
+    private Boolean mercadoPagoConectado;
     private List<HorarioResponse> horarios;
 
     @Data

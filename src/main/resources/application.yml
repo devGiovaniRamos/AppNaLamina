@@ -40,8 +40,13 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS}
 
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
 mercadopago:
-  access-token: ${MERCADOPAGO_ACCESS_TOKEN:TEST-placeholder}
+  client-id: ${MERCADOPAGO_CLIENT_ID:}
+  client-secret: ${MERCADOPAGO_CLIENT_SECRET:}
+  redirect-uri: ${MERCADOPAGO_REDIRECT_URI:http://localhost:8080/barbearia/mercadopago/callback}
   webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
 
 logging:

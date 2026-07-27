@@ -9,6 +9,8 @@ export const getBarbearia = () => api.get('/barbearia').then(r => r.data);
 export const atualizarPerfil = (data) => api.put('/barbearia/perfil', data).then(r => r.data);
 export const atualizarHorario = (data) => api.put('/barbearia/horario', data).then(r => r.data);
 export const atualizarTodosHorarios = (data) => api.put('/barbearia/horario/todos', data).then(r => r.data);
+export const conectarMercadoPago = () => api.get('/barbearia/mercadopago/conectar').then(r => r.data);
+export const desconectarMercadoPago = () => api.delete('/barbearia/mercadopago/desconectar').then(r => r.data);
 
 // Agendamentos
 export const listarAgendamentos = () => api.get('/agendamentos').then(r => r.data);

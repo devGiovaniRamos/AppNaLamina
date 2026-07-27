@@ -13,6 +13,8 @@ export default function Configuracoes() {
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [conectandoMP, setConectandoMP] = useState(false);
+  const [desconectandoMP, setDesconectandoMP] = useState(false);
 
   const [perfil, setPerfil] = useState({ nome: '', email: '', telefone: '', cnpj: '', endereco: '', descricao: '' });
   const [template, setTemplate] = useState({ horaInicio1: '', horaFim1: '', horaInicio2: '', horaFim2: '' });
@@ -30,6 +32,39 @@ export default function Configuracoes() {
       });
     }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resultado = params.get('mercadopago');
+    if (!resultado) return;
+    if (resultado === 'conectado') mostrarSucesso('Conta Mercado Pago conectada com sucesso!');
+    else if (resultado === 'erro') setErro('Não foi possível conectar sua conta Mercado Pago. Tente novamente.');
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
+  async function handleConectarMercadoPago() {
+    setConectandoMP(true);
+    setErro('');
+    try {
+      const { url } = await api.conectarMercadoPago();
+      window.location.href = url;
+    } catch (err) {
+      setErro(err.response?.data?.message || 'Erro ao iniciar conexão com o Mercado Pago');
+      setConectandoMP(false);
+    }
+  }
+
+  async function handleDesconectarMercadoPago() {
+    if (!confirm('Desconectar sua conta Mercado Pago? Não será possível gerar novos PIX até reconectar.')) return;
+    setDesconectandoMP(true);
+    try {
+      await api.desconectarMercadoPago();
+      setBarbearia(prev => ({ ...prev, mercadoPagoConectado: false }));
+      mostrarSucesso('Conta Mercado Pago desconectada.');
+    } catch (err) {
+      setErro(err.response?.data?.message || 'Erro ao desconectar o Mercado Pago');
+    } finally { setDesconectandoMP(false); }
+  }
 
   function mostrarSucesso(msg) {
     setSucesso(msg);
@@ -118,6 +153,30 @@ export default function Configuracoes() {
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Configurações</h1>
 
       {sucesso && <p className="text-green-600 text-sm bg-green-50 p-3 rounded-lg mb-4">{sucesso}</p>}
+      {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg mb-4">{erro}</p>}
+
+      {/* Recebimento via Mercado Pago */}
+      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Recebimento via Mercado Pago</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Conecte sua própria conta Mercado Pago para receber diretamente os pagamentos PIX dos agendamentos.
+        </p>
+        {barbearia?.mercadoPagoConectado ? (
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
+              <Check size={15} /> Conta conectada
+            </span>
+            <button onClick={handleDesconectarMercadoPago} disabled={desconectandoMP}
+              className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50">
+              {desconectandoMP ? 'Desconectando...' : 'Desconectar'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleConectarMercadoPago} disabled={conectandoMP} className="btn-primary disabled:opacity-50">
+            {conectandoMP ? 'Redirecionando...' : 'Conectar Mercado Pago'}
+          </button>
+        )}
+      </section>
 
       {/* Link público de agendamento */}
       {linkPublico && (
