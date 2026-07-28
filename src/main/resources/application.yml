@@ -42,6 +42,7 @@ jwt:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  encryption-key: ${APP_ENCRYPTION_KEY:}
 
 mercadopago:
   client-id: ${MERCADOPAGO_CLIENT_ID:}

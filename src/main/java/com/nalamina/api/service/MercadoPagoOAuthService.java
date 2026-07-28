@@ -23,8 +23,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MercadoPagoOAuthService {
 
+    private static final long STATE_VALIDADE_MS = 10 * 60 * 1000; // 10 minutos
+
     private final MercadoPagoService mercadoPagoService;
     private final TenantRepository tenantRepository;
+    private final CryptoService cryptoService;
 
     @Value("${jwt.secret}")
     private String stateSecret;
@@ -56,7 +59,8 @@ public class MercadoPagoOAuthService {
     }
 
     /**
-     * Retorna um access token válido da barbearia, renovando via refresh token quando estiver perto de expirar.
+     * Retorna um access token válido (já decifrado) da barbearia, renovando via refresh token
+     * quando estiver perto de expirar.
      */
     @Transactional
     public String obterAccessTokenValido(TenantEntity tenant) {
@@ -67,17 +71,18 @@ public class MercadoPagoOAuthService {
 
         if (tenant.getMercadoPagoTokenExpiraEm() != null
                 && tenant.getMercadoPagoTokenExpiraEm().isBefore(LocalDateTime.now().plusDays(1))) {
-            MercadoPagoService.MercadoPagoTokens tokens = mercadoPagoService.renovarToken(tenant.getMercadoPagoRefreshToken());
+            String refreshToken = cryptoService.decrypt(tenant.getMercadoPagoRefreshToken());
+            MercadoPagoService.MercadoPagoTokens tokens = mercadoPagoService.renovarToken(refreshToken);
             salvarTokens(tenant, tokens);
         }
 
-        return tenant.getMercadoPagoAccessToken();
+        return cryptoService.decrypt(tenant.getMercadoPagoAccessToken());
     }
 
     private void salvarTokens(TenantEntity tenant, MercadoPagoService.MercadoPagoTokens tokens) {
-        tenant.setMercadoPagoAccessToken(tokens.accessToken());
+        tenant.setMercadoPagoAccessToken(cryptoService.encrypt(tokens.accessToken()));
         if (tokens.refreshToken() != null) {
-            tenant.setMercadoPagoRefreshToken(tokens.refreshToken());
+            tenant.setMercadoPagoRefreshToken(cryptoService.encrypt(tokens.refreshToken()));
         }
         tenant.setMercadoPagoPublicKey(tokens.publicKey());
         tenant.setMercadoPagoUserId(tokens.userId());
@@ -85,24 +90,41 @@ public class MercadoPagoOAuthService {
         tenantRepository.save(tenant);
     }
 
+    /**
+     * State = "tenantId:timestamp" assinado com HMAC. O timestamp limita a janela em que um state
+     * vazado (ex: log de proxy, histórico do navegador) poderia ser reaproveitado por alguém que
+     * complete o login no Mercado Pago com a própria conta antes de expirar.
+     */
     private String assinarState(UUID tenantId) {
-        return tenantId + "." + hmac(tenantId.toString());
+        String payload = tenantId + ":" + System.currentTimeMillis();
+        return payload + "." + hmac(payload);
     }
 
     private UUID validarState(String state) {
         String[] partes = state != null ? state.split("\\.", 2) : new String[0];
-        if (partes.length != 2) {
+        if (partes.length != 2 || !hmac(partes[0]).equals(partes[1])) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "state inválido");
         }
+
+        String[] payload = partes[0].split(":", 2);
+        if (payload.length != 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "state inválido");
+        }
+
         UUID tenantId;
+        long timestamp;
         try {
-            tenantId = UUID.fromString(partes[0]);
+            tenantId = UUID.fromString(payload[0]);
+            timestamp = Long.parseLong(payload[1]);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "state inválido");
         }
-        if (!hmac(tenantId.toString()).equals(partes[1])) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "state inválido");
+
+        if (System.currentTimeMillis() - timestamp > STATE_VALIDADE_MS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Link de conexão expirado. Volte em Configurações e clique em Conectar novamente.");
         }
+
         return tenantId;
     }
 
