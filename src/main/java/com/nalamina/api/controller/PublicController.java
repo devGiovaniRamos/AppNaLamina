@@ -9,6 +9,7 @@ import com.nalamina.api.dto.assinaturacliente.AssinaturaResponse;
 import com.nalamina.api.dto.assinaturacliente.AssinaturaStatusPublicoResponse;
 import com.nalamina.api.dto.campeonato.CampeonatoResponse;
 import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
+import com.nalamina.api.dto.cliente.ClienteConhecidoResponse;
 import com.nalamina.api.dto.planoassinatura.PlanoAssinaturaResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
 import com.nalamina.api.dto.tenant.BarbeariaPublicaResponse;
@@ -18,6 +19,7 @@ import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.service.AgendamentoService;
 import com.nalamina.api.service.AssinaturaClienteService;
 import com.nalamina.api.service.CampeonatoService;
+import com.nalamina.api.service.ClientePublicoService;
 import com.nalamina.api.service.PlanoAssinaturaService;
 import com.nalamina.api.service.SlotService;
 import jakarta.validation.Valid;
@@ -47,6 +49,7 @@ public class PublicController {
     private final CampeonatoService campeonatoService;
     private final PlanoAssinaturaService planoAssinaturaService;
     private final AssinaturaClienteService assinaturaClienteService;
+    private final ClientePublicoService clientePublicoService;
 
     private UUID resolverTenantId(String slug) {
         return resolverTenant(slug).getId();
@@ -163,5 +166,13 @@ public class PublicController {
             @Valid @RequestBody AssinarRequest request) {
         TenantEntity tenant = resolverTenant(slug);
         return ResponseEntity.status(201).body(assinaturaClienteService.assinar(tenant, request));
+    }
+
+    @GetMapping("/cliente")
+    public ResponseEntity<ClienteConhecidoResponse> cliente(
+            @PathVariable String slug,
+            @RequestParam String telefone) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(clientePublicoService.identificar(tenantId, telefone));
     }
 }

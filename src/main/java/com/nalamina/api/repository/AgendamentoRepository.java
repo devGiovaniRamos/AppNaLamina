@@ -20,6 +20,8 @@ public interface AgendamentoRepository extends JpaRepository<AgendamentoEntity, 
 
     Optional<AgendamentoEntity> findByIdAndTenantEntity_Id(UUID id, UUID tenantId);
 
+    Optional<AgendamentoEntity> findFirstByTenantEntity_IdAndClienteTelOrderByCriadoEmDesc(UUID tenantId, String clienteTel);
+
     @Query("""
     SELECT COUNT(a) > 0 FROM AgendamentoEntity a
     WHERE a.profissionalEntity.id = :profissionalId

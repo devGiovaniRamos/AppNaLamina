@@ -22,5 +22,8 @@ public interface AssinaturaClienteRepository extends JpaRepository<AssinaturaCli
     Optional<AssinaturaClienteEntity> findFirstByPlano_TenantEntity_IdAndClienteTelAndStatusInOrderByCriadoEmDesc(
             UUID tenantId, String clienteTel, List<StatusAssinatura> status);
 
+    Optional<AssinaturaClienteEntity> findFirstByPlano_TenantEntity_IdAndClienteTelOrderByCriadoEmDesc(
+            UUID tenantId, String clienteTel);
+
     List<AssinaturaClienteEntity> findByStatusAndPixExpiraEmBefore(StatusAssinatura status, LocalDateTime momento);
 }

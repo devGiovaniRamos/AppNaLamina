@@ -14,11 +14,15 @@ export default function Agendar() {
 
   // modo: 'identificacao' -> 'decisao' -> 'agendamento' | 'assinatura'
   const [modo, setModo] = useState('identificacao');
+  // identStep (só dentro de 'identificacao'): 'telefone' -> 'nome' (só se for telefone novo)
+  const [identStep, setIdentStep] = useState('telefone');
 
   const [clienteNome, setClienteNome] = useState('');
   const [clienteTel, setClienteTel] = useState('');
+  const [telefoneInput, setTelefoneInput] = useState('');
   const [verificando, setVerificando] = useState(false);
   const [erroIdentificacao, setErroIdentificacao] = useState('');
+  const [saudacao, setSaudacao] = useState('');
   const [statusAssinante, setStatusAssinante] = useState(null);
   const [planosAtivos, setPlanosAtivos] = useState([]);
 
@@ -65,12 +69,39 @@ export default function Agendar() {
       .finally(() => setCarregandoSlots(false));
   }, [slug, servico, data]);
 
-  async function handleIdentificacao(e) {
+  async function handleTelefoneSubmit(e) {
     e.preventDefault();
     setVerificando(true);
     setErroIdentificacao('');
     try {
-      const status = await api.assinaturaStatus(slug, clienteTel);
+      const cliente = await api.identificarCliente(slug, telefoneInput);
+      setClienteTel(cliente.telefoneNormalizado);
+
+      if (cliente.conhecido) {
+        setClienteNome(cliente.nome);
+        setSaudacao(`Bem-vindo de volta, ${cliente.nome}! 👋`);
+        await continuarAposIdentificacao(cliente.telefoneNormalizado);
+      } else {
+        setIdentStep('nome');
+      }
+    } catch (err) {
+      setErroIdentificacao(err.response?.data?.message || 'Telefone inválido. Confira e tente novamente.');
+    } finally { setVerificando(false); }
+  }
+
+  async function handleNomeSubmit(e) {
+    e.preventDefault();
+    setVerificando(true);
+    setErroIdentificacao('');
+    try {
+      setSaudacao(`Bem-vindo, ${clienteNome}! Prazer em te conhecer. 👋`);
+      await continuarAposIdentificacao(clienteTel);
+    } finally { setVerificando(false); }
+  }
+
+  async function continuarAposIdentificacao(telefoneNormalizado) {
+    try {
+      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
       setStatusAssinante(status);
 
       if (status.assinante) {
@@ -86,13 +117,20 @@ export default function Agendar() {
         iniciarAgendamento();
       }
     } catch (err) {
-      setErroIdentificacao(err.response?.data?.message || 'Telefone inválido. Confira e tente novamente.');
-    } finally { setVerificando(false); }
+      setErroIdentificacao(err.response?.data?.message || 'Não foi possível continuar. Tente novamente.');
+    }
   }
 
   function iniciarAgendamento() {
     setModo('agendamento');
     setStep(1);
+  }
+
+  function voltarParaIdentificacao() {
+    setModo('identificacao');
+    setIdentStep('telefone');
+    setSaudacao('');
+    setErroIdentificacao('');
   }
 
   function iniciarAssinatura() {
@@ -127,7 +165,11 @@ export default function Agendar() {
     setErro('');
     if (step === 1) {
       const semOfertaDeAssinatura = !statusAssinante?.assinante && planosAtivos.length === 0;
-      setModo(semOfertaDeAssinatura ? 'identificacao' : 'decisao');
+      if (semOfertaDeAssinatura) {
+        voltarParaIdentificacao();
+      } else {
+        setModo('decisao');
+      }
       return;
     }
     setStep(s => Math.max(1, s - 1));
@@ -207,17 +249,32 @@ export default function Agendar() {
       </header>
 
       <div className="max-w-md mx-auto p-4">
-        {modo === 'identificacao' && (
-          <form onSubmit={handleIdentificacao} className="space-y-4">
-            <h2 className="font-semibold text-slate-800">Seus dados</h2>
-            <p className="text-sm text-slate-500">Informe seu nome e telefone para continuar.</p>
+        {modo === 'identificacao' && identStep === 'telefone' && (
+          <form onSubmit={handleTelefoneSubmit} className="space-y-4">
+            <h2 className="font-semibold text-slate-800">Olá! 👋</h2>
+            <p className="text-sm text-slate-500">Informe seu telefone para começar.</p>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <input className="input" required autoFocus type="tel" placeholder="(21) 99999-9999"
+                value={telefoneInput} onChange={e => setTelefoneInput(e.target.value)} />
+            </div>
+            {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
+            <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
+              {verificando ? 'Verificando...' : 'Continuar'}
+            </button>
+          </form>
+        )}
+
+        {modo === 'identificacao' && identStep === 'nome' && (
+          <form onSubmit={handleNomeSubmit} className="space-y-4">
+            <button type="button" onClick={() => setIdentStep('telefone')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+            <h2 className="font-semibold text-slate-800">Prazer em te conhecer!</h2>
+            <p className="text-sm text-slate-500">Não te encontramos por aqui ainda — como podemos te chamar?</p>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
               <input className="input" required autoFocus value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
-              <input className="input" required placeholder="(21) 99999-9999" value={clienteTel} onChange={e => setClienteTel(e.target.value)} />
             </div>
             {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
             <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
@@ -228,9 +285,13 @@ export default function Agendar() {
 
         {modo === 'decisao' && (
           <div className="space-y-4">
-            <button onClick={() => setModo('identificacao')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+            <button onClick={voltarParaIdentificacao} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
+
+            {saudacao && (
+              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">{saudacao}</p>
+            )}
 
             {statusAssinante?.assinante ? (
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 text-center">
@@ -334,6 +395,10 @@ export default function Agendar() {
             <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
               <ChevronLeft size={16} /> Voltar
             </button>
+
+            {step === 1 && saudacao && (
+              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-3">{saudacao}</p>
+            )}
 
             {step === 1 && (
               <div className="space-y-3">
