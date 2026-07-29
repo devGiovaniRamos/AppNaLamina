@@ -5,6 +5,7 @@ import com.nalamina.api.entity.enums.StatusAssinatura;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,4 +21,6 @@ public interface AssinaturaClienteRepository extends JpaRepository<AssinaturaCli
 
     Optional<AssinaturaClienteEntity> findFirstByPlano_TenantEntity_IdAndClienteTelAndStatusInOrderByCriadoEmDesc(
             UUID tenantId, String clienteTel, List<StatusAssinatura> status);
+
+    List<AssinaturaClienteEntity> findByStatusAndPixExpiraEmBefore(StatusAssinatura status, LocalDateTime momento);
 }

@@ -49,6 +49,7 @@ mercadopago:
   client-secret: ${MERCADOPAGO_CLIENT_SECRET:}
   redirect-uri: ${MERCADOPAGO_REDIRECT_URI:http://localhost:8080/barbearia/mercadopago/callback}
   webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
+  pix-expiracao-minutos: ${MERCADOPAGO_PIX_EXPIRACAO_MINUTOS:30}
 
 logging:
   level:

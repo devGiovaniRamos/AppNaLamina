@@ -67,7 +67,8 @@ public class PagamentoService {
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(agendamentoId, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
-        if (pagamentoRepository.existsByAgendamentoEntity_Id(agendamentoId)) {
+        if (pagamentoRepository.existsByAgendamentoEntity_IdAndStatusIn(
+                agendamentoId, List.of(StatusPagamento.PENDENTE, StatusPagamento.PAGO))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento já possui pagamento registrado");
         }
 

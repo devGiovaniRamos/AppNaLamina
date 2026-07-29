@@ -4,9 +4,10 @@ import * as api from '../api';
 
 const STATUS_LABEL = {
   PENDENTE_PAGAMENTO: { label: 'Aguardando pagamento', className: 'bg-amber-50 text-amber-600' },
+  EXPIRADA: { label: 'PIX não pago', className: 'bg-gray-100 text-gray-500' },
   ATIVA: { label: 'Ativa', className: 'bg-green-50 text-green-600' },
   CANCELADA: { label: 'Cancelada', className: 'bg-slate-100 text-slate-500' },
-  INADIMPLENTE: { label: 'Expirada', className: 'bg-red-50 text-red-600' },
+  INADIMPLENTE: { label: 'Vencida', className: 'bg-red-50 text-red-600' },
   TRIAL: { label: 'Trial', className: 'bg-blue-50 text-blue-600' },
 };
 
@@ -82,13 +83,16 @@ export default function Assinaturas() {
                   <td className="px-4 py-3 text-slate-600">{fmtData(a.expiraEm)}</td>
                   <td className="px-4 py-3 text-slate-600">{diasRestantesLabel(a)}</td>
                   <td className="px-4 py-3 text-right">
-                    {a.status !== 'CANCELADA' && (
-                      <button onClick={() => handleRenovar(a.id)} disabled={renovandoId === a.id}
-                        title={a.status === 'PENDENTE_PAGAMENTO' ? 'Ativar manualmente (ex: pago em dinheiro)' : 'Renovar por mais 30 dias'}
-                        className="px-2.5 py-1 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50">
-                        {renovandoId === a.id ? '...' : (a.status === 'PENDENTE_PAGAMENTO' ? 'Ativar' : 'Renovar')}
-                      </button>
-                    )}
+                    {a.status !== 'CANCELADA' && (() => {
+                      const precisaAtivar = a.status === 'PENDENTE_PAGAMENTO' || a.status === 'EXPIRADA';
+                      return (
+                        <button onClick={() => handleRenovar(a.id)} disabled={renovandoId === a.id}
+                          title={precisaAtivar ? 'Ativar manualmente (ex: pago em dinheiro)' : 'Renovar por mais 30 dias'}
+                          className="px-2.5 py-1 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50">
+                          {renovandoId === a.id ? '...' : (precisaAtivar ? 'Ativar' : 'Renovar')}
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               );

@@ -33,17 +33,20 @@ public class MercadoPagoService {
     private final String clientSecret;
     private final String redirectUri;
     private final String webhookSecret;
+    private final int pixExpiracaoMinutos;
 
     public MercadoPagoService(
             @Value("${mercadopago.client-id:}") String clientId,
             @Value("${mercadopago.client-secret:}") String clientSecret,
             @Value("${mercadopago.redirect-uri:}") String redirectUri,
-            @Value("${mercadopago.webhook-secret:}") String webhookSecret) {
+            @Value("${mercadopago.webhook-secret:}") String webhookSecret,
+            @Value("${mercadopago.pix-expiracao-minutos:30}") int pixExpiracaoMinutos) {
         this.restClient = RestClient.builder().baseUrl("https://api.mercadopago.com").build();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
         this.webhookSecret = webhookSecret;
+        this.pixExpiracaoMinutos = pixExpiracaoMinutos;
     }
 
     public String gerarUrlAutorizacao(String state) {
@@ -106,6 +109,9 @@ public class MercadoPagoService {
     public MercadoPagoPixResult criarPagamentoPix(
             String accessToken, String descricao, String clienteNome, String clienteTel, BigDecimal valor, UUID referenciaId) {
         String emailPagador = clienteTel.replaceAll("\\D", "") + "@cliente.nalamina.com.br";
+        String dataExpiracao = OffsetDateTime.now()
+                .plusMinutes(pixExpiracaoMinutos)
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("transaction_amount", valor);
@@ -113,6 +119,7 @@ public class MercadoPagoService {
         body.put("payment_method_id", "pix");
         body.put("payer", Map.of("email", emailPagador, "first_name", clienteNome));
         body.put("metadata", Map.of("referencia_id", referenciaId.toString()));
+        body.put("date_of_expiration", dataExpiracao);
 
         try {
             JsonNode response = restClient.post()
