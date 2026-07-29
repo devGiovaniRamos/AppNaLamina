@@ -84,7 +84,8 @@ public class PagamentoService {
         if (request.getMetodo() == MetodoPagamento.PIX) {
             String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
             MercadoPagoService.MercadoPagoPixResult pix = mercadoPagoService.criarPagamentoPix(
-                    accessToken, agendamento.getClienteNome(), agendamento.getClienteTel(), valorTotal, agendamentoId);
+                    accessToken, "Agendamento NaLâmina", agendamento.getClienteNome(), agendamento.getClienteTel(),
+                    valorTotal, agendamentoId);
             builder.status(StatusPagamento.PENDENTE)
                    .mercadoPagoPaymentId(pix.paymentId())
                    .pixCopiaECola(pix.pixCopiaECola())
@@ -184,19 +185,24 @@ public class PagamentoService {
      * Ponto de entrada do webhook do Mercado Pago: localiza o pagamento pelo id recebido, usa o
      * access token da própria barbearia (dona daquele pagamento) para confirmar o status real na API
      * antes de dar baixa — nunca confia apenas no corpo da notificação.
+     *
+     * @return true se o id recebido correspondia a um pagamento de agendamento (tratado ou não),
+     *         false se não foi encontrado aqui — nesse caso pode ser um pagamento de assinatura.
      */
     @Transactional
-    public void processarWebhookMercadoPago(String mercadoPagoPaymentId) {
+    public boolean processarWebhookMercadoPago(String mercadoPagoPaymentId) {
         PagamentoEntity pagamento = pagamentoRepository.findByMercadoPagoPaymentId(mercadoPagoPaymentId)
                 .orElse(null);
-        if (pagamento == null || pagamento.getStatus() == StatusPagamento.PAGO) return;
+        if (pagamento == null) return false;
+        if (pagamento.getStatus() == StatusPagamento.PAGO) return true;
 
         TenantEntity tenant = pagamento.getAgendamentoEntity().getTenantEntity();
         String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
         String status = mercadoPagoService.consultarStatus(accessToken, mercadoPagoPaymentId);
-        if (!"approved".equals(status)) return;
-
-        confirmarPagamento(mercadoPagoPaymentId);
+        if ("approved".equals(status)) {
+            confirmarPagamento(mercadoPagoPaymentId);
+        }
+        return true;
     }
 
     @Transactional

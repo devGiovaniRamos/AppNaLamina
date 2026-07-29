@@ -9,9 +9,11 @@ import Pagamentos from './pages/Pagamentos';
 import Estoque from './pages/Estoque';
 import Venda from './pages/Venda';
 import Campeonato from './pages/Campeonato';
+import Assinaturas from './pages/Assinaturas';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
 import Agendar from './pages/public/Agendar';
+import Assinar from './pages/public/Assinar';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -26,6 +28,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/agendar/:slug" element={<Agendar />} />
+          <Route path="/assinar/:slug" element={<Assinar />} />
           <Route
             path="/"
             element={
@@ -42,6 +45,7 @@ export default function App() {
             <Route path="estoque" element={<Estoque />} />
             <Route path="venda" element={<Venda />} />
             <Route path="campeonato" element={<Campeonato />} />
+            <Route path="assinaturas" element={<Assinaturas />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

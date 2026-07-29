@@ -24,24 +24,36 @@ public class AssinaturaClienteEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private UsuarioEntity usuarioEntity;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plano_id", nullable = false)
     private PlanoAssinaturaEntity plano;
 
+    @Column(name = "cliente_nome", nullable = false, length = 100)
+    private String clienteNome;
+
+    @Column(name = "cliente_tel", nullable = false, length = 20)
+    private String clienteTel;
+
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StatusAssinatura status;
+    private StatusAssinatura status = StatusAssinatura.PENDENTE_PAGAMENTO;
 
-    @Column(name = "mercado_pago_subscription_id", unique = true, length = 100)
-    private String mercadoPagoSubscriptionId;
-
-    @Column(nullable = false)
     private LocalDate inicio;
 
-    private LocalDate fim;
+    @Column(name = "expira_em")
+    private LocalDate expiraEm;
+
+    @Column(name = "mercado_pago_payment_id", length = 255)
+    private String mercadoPagoPaymentId;
+
+    @Column(name = "pix_copia_e_cola", columnDefinition = "TEXT")
+    private String pixCopiaECola;
+
+    @Column(name = "pix_qr_code_base64", columnDefinition = "TEXT")
+    private String pixQrCodeBase64;
+
+    @Column(name = "pix_expira_em")
+    private LocalDateTime pixExpiraEm;
 
     @Builder.Default
     @Column(name = "criado_em", nullable = false, updatable = false)

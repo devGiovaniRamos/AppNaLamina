@@ -2,6 +2,7 @@ package com.nalamina.api.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nalamina.api.service.AssinaturaClienteService;
 import com.nalamina.api.service.MercadoPagoService;
 import com.nalamina.api.service.PagamentoService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class MercadoPagoWebhookController {
 
     private final MercadoPagoService mercadoPagoService;
     private final PagamentoService pagamentoService;
+    private final AssinaturaClienteService assinaturaClienteService;
     private final ObjectMapper objectMapper;
 
     @PostMapping
@@ -40,7 +42,10 @@ public class MercadoPagoWebhookController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            pagamentoService.processarWebhookMercadoPago(paymentId);
+            boolean eraAgendamento = pagamentoService.processarWebhookMercadoPago(paymentId);
+            if (!eraAgendamento) {
+                assinaturaClienteService.processarWebhookMercadoPago(paymentId);
+            }
             log.info("Webhook Mercado Pago processado para pagamento {}", paymentId);
         } catch (Exception e) {
             log.error("Erro ao processar webhook Mercado Pago: {}", e.getMessage());

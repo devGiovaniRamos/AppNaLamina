@@ -99,22 +99,26 @@ public class MercadoPagoService {
         }
     }
 
+    /**
+     * @param referenciaId id do agendamento ou da assinatura que originou a cobrança — usado só como
+     *                      chave de idempotência e metadado, não precisa ser um agendamento.
+     */
     public MercadoPagoPixResult criarPagamentoPix(
-            String accessToken, String clienteNome, String clienteTel, BigDecimal valor, UUID agendamentoId) {
+            String accessToken, String descricao, String clienteNome, String clienteTel, BigDecimal valor, UUID referenciaId) {
         String emailPagador = clienteTel.replaceAll("\\D", "") + "@cliente.nalamina.com.br";
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("transaction_amount", valor);
-        body.put("description", "Agendamento NaLâmina");
+        body.put("description", descricao);
         body.put("payment_method_id", "pix");
         body.put("payer", Map.of("email", emailPagador, "first_name", clienteNome));
-        body.put("metadata", Map.of("agendamento_id", agendamentoId.toString()));
+        body.put("metadata", Map.of("referencia_id", referenciaId.toString()));
 
         try {
             JsonNode response = restClient.post()
                     .uri("/v1/payments")
                     .header("Authorization", "Bearer " + accessToken)
-                    .header("X-Idempotency-Key", agendamentoId.toString())
+                    .header("X-Idempotency-Key", referenciaId.toString())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
