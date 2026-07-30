@@ -3,7 +3,12 @@ import { TrendingUp, CreditCard, DollarSign, Hash, RefreshCw } from 'lucide-reac
 import * as api from '../api';
 
 const METODO_LABEL = { PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO_CREDITO: 'Crédito', CARTAO_DEBITO: 'Débito' };
-const STATUS_COLOR = { PAGO: 'bg-green-100 text-green-800', PENDENTE: 'bg-yellow-100 text-yellow-800', CANCELADO: 'bg-gray-100 text-gray-500' };
+const STATUS_COLOR = {
+  PAGO: 'bg-green-100 text-green-800',
+  PENDENTE: 'bg-yellow-100 text-yellow-800',
+  CANCELADO: 'bg-gray-100 text-gray-500',
+  EXPIRADO: 'bg-gray-100 text-gray-500',
+};
 
 const hoje = new Date().toISOString().split('T')[0];
 const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];

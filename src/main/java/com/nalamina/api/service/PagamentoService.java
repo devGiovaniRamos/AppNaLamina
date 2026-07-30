@@ -40,7 +40,8 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final TenantRepository tenantRepository;
-    private final PagarmeService pagarmeService;
+    private final MercadoPagoService mercadoPagoService;
+    private final MercadoPagoOAuthService mercadoPagoOAuthService;
     private final PontuacaoService pontuacaoService;
 
     private BigDecimal calcularTaxa(BigDecimal valorServico, BigDecimal taxaPct) {
@@ -66,7 +67,8 @@ public class PagamentoService {
         AgendamentoEntity agendamento = agendamentoRepository.findByIdAndTenantEntity_Id(agendamentoId, tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
 
-        if (pagamentoRepository.existsByAgendamentoEntity_Id(agendamentoId)) {
+        if (pagamentoRepository.existsByAgendamentoEntity_IdAndStatusIn(
+                agendamentoId, List.of(StatusPagamento.PENDENTE, StatusPagamento.PAGO))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Agendamento já possui pagamento registrado");
         }
 
@@ -81,11 +83,14 @@ public class PagamentoService {
                 .metodo(request.getMetodo());
 
         if (request.getMetodo() == MetodoPagamento.PIX) {
-            PagarmeService.PagarmePixResult pix = pagarmeService.criarCobrancaPix(
-                    agendamento.getClienteNome(), valorTotal, agendamentoId);
+            String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
+            MercadoPagoService.MercadoPagoPixResult pix = mercadoPagoService.criarPagamentoPix(
+                    accessToken, "Agendamento NaLâmina", agendamento.getClienteNome(), agendamento.getClienteTel(),
+                    valorTotal, agendamentoId);
             builder.status(StatusPagamento.PENDENTE)
-                   .pagarmeChargeId(pix.chargeId())
+                   .mercadoPagoPaymentId(pix.paymentId())
                    .pixCopiaECola(pix.pixCopiaECola())
+                   .pixQrCodeBase64(pix.qrCodeBase64())
                    .pixExpiraEm(pix.pixExpiraEm());
         } else {
             builder.status(StatusPagamento.PAGO)
@@ -177,9 +182,33 @@ public class PagamentoService {
                 .build();
     }
 
+    /**
+     * Ponto de entrada do webhook do Mercado Pago: localiza o pagamento pelo id recebido, usa o
+     * access token da própria barbearia (dona daquele pagamento) para confirmar o status real na API
+     * antes de dar baixa — nunca confia apenas no corpo da notificação.
+     *
+     * @return true se o id recebido correspondia a um pagamento de agendamento (tratado ou não),
+     *         false se não foi encontrado aqui — nesse caso pode ser um pagamento de assinatura.
+     */
     @Transactional
-    public void confirmarPagamento(String pagarmeChargeId) {
-        PagamentoEntity pagamento = pagamentoRepository.findByPagarmeChargeId(pagarmeChargeId)
+    public boolean processarWebhookMercadoPago(String mercadoPagoPaymentId) {
+        PagamentoEntity pagamento = pagamentoRepository.findByMercadoPagoPaymentId(mercadoPagoPaymentId)
+                .orElse(null);
+        if (pagamento == null) return false;
+        if (pagamento.getStatus() == StatusPagamento.PAGO) return true;
+
+        TenantEntity tenant = pagamento.getAgendamentoEntity().getTenantEntity();
+        String accessToken = mercadoPagoOAuthService.obterAccessTokenValido(tenant);
+        String status = mercadoPagoService.consultarStatus(accessToken, mercadoPagoPaymentId);
+        if ("approved".equals(status)) {
+            confirmarPagamento(mercadoPagoPaymentId);
+        }
+        return true;
+    }
+
+    @Transactional
+    public void confirmarPagamento(String mercadoPagoPaymentId) {
+        PagamentoEntity pagamento = pagamentoRepository.findByMercadoPagoPaymentId(mercadoPagoPaymentId)
                 .orElse(null);
         if (pagamento == null || pagamento.getStatus() == StatusPagamento.PAGO) return;
 
@@ -217,6 +246,7 @@ public class PagamentoService {
                 .pagoEm(p.getPagoEm())
                 .criadoEm(p.getCriadoEm())
                 .pixCopiaECola(p.getPixCopiaECola())
+                .pixQrCodeBase64(p.getPixQrCodeBase64())
                 .pixExpiraEm(p.getPixExpiraEm())
                 .build();
     }

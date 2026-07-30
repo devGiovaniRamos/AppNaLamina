@@ -92,6 +92,7 @@ public class TenantService {
                 .endereco(tenant.getEndereco())
                 .descricao(tenant.getDescricao())
                 .slug(tenant.getSlug())
+                .mercadoPagoConectado(tenant.getMercadoPagoAccessToken() != null)
                 .horarios(horarios.stream().map(h -> BarbeariaResponse.HorarioResponse.builder()
                         .diaSemana(h.getDiaSemana())
                         .aberto(h.getAberto())

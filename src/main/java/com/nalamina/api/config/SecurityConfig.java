@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/webhooks/**").permitAll()
+                        .requestMatchers("/barbearia/mercadopago/callback").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

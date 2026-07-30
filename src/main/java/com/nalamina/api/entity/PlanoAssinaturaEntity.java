@@ -35,9 +35,6 @@ public class PlanoAssinaturaEntity {
     @Column(name = "preco_mensal", nullable = false, precision = 10, scale = 2)
     private BigDecimal precoMensal;
 
-    @Column(name = "max_agendamentos")
-    private Integer maxAgendamentos;
-
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;

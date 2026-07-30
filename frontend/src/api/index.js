@@ -9,6 +9,8 @@ export const getBarbearia = () => api.get('/barbearia').then(r => r.data);
 export const atualizarPerfil = (data) => api.put('/barbearia/perfil', data).then(r => r.data);
 export const atualizarHorario = (data) => api.put('/barbearia/horario', data).then(r => r.data);
 export const atualizarTodosHorarios = (data) => api.put('/barbearia/horario/todos', data).then(r => r.data);
+export const conectarMercadoPago = () => api.get('/barbearia/mercadopago/conectar').then(r => r.data);
+export const desconectarMercadoPago = () => api.delete('/barbearia/mercadopago/desconectar').then(r => r.data);
 
 // Agendamentos
 export const listarAgendamentos = () => api.get('/agendamentos').then(r => r.data);
@@ -62,3 +64,13 @@ export const buscarCampeonatoAtivo = () => api.get('/campeonatos/ativo').then(r 
 export const listarCampeonatos = () => api.get('/campeonatos').then(r => r.data);
 export const encerrarCampeonato = (id) => api.post(`/campeonatos/${id}/encerrar`).then(r => r.data);
 export const rankingCampeonato = (id) => api.get(`/campeonatos/${id}/ranking`).then(r => r.data);
+
+// Planos de assinatura
+export const listarPlanos = () => api.get('/planos').then(r => r.data);
+export const criarPlano = (data) => api.post('/planos', data).then(r => r.data);
+export const atualizarPlano = (id, data) => api.put(`/planos/${id}`, data).then(r => r.data);
+export const alternarAtivoPlano = (id, ativo) => api.patch(`/planos/${id}/ativo`, { ativo }).then(r => r.data);
+
+// Assinaturas de clientes (admin)
+export const listarAssinaturas = () => api.get('/assinaturas').then(r => r.data);
+export const renovarAssinatura = (id) => api.post(`/assinaturas/${id}/renovar`).then(r => r.data);

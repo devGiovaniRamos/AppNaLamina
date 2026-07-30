@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Trophy, Settings, LogOut } from 'lucide-react';
+import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Trophy, BadgeCheck, Settings, LogOut } from 'lucide-react';
 import NotificacaoSino from './NotificacaoSino';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/estoque', icon: Boxes, label: 'Estoque' },
   { to: '/venda', icon: ShoppingCart, label: 'Venda' },
   { to: '/campeonato', icon: Trophy, label: 'Campeonato' },
+  { to: '/assinaturas', icon: BadgeCheck, label: 'Assinaturas' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 

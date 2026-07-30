@@ -51,6 +51,21 @@ public class TenantEntity implements Persistable<UUID> {
     @Column(name = "taxa_agendamento_pct", precision = 5, scale = 2)
     private java.math.BigDecimal taxaAgendamentoPct;
 
+    @Column(name = "mercado_pago_access_token", columnDefinition = "TEXT")
+    private String mercadoPagoAccessToken;
+
+    @Column(name = "mercado_pago_refresh_token", columnDefinition = "TEXT")
+    private String mercadoPagoRefreshToken;
+
+    @Column(name = "mercado_pago_public_key", length = 255)
+    private String mercadoPagoPublicKey;
+
+    @Column(name = "mercado_pago_user_id", length = 100)
+    private String mercadoPagoUserId;
+
+    @Column(name = "mercado_pago_token_expira_em")
+    private LocalDateTime mercadoPagoTokenExpiraEm;
+
     @Transient
     @Builder.Default
     @EqualsAndHashCode.Exclude

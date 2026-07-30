@@ -27,5 +27,6 @@ public class PagamentoResponse {
     private LocalDateTime pagoEm;
     private LocalDateTime criadoEm;
     private String pixCopiaECola;
+    private String pixQrCodeBase64;
     private LocalDateTime pixExpiraEm;
 }

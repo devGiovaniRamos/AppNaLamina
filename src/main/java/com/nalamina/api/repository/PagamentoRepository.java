@@ -1,6 +1,7 @@
 package com.nalamina.api.repository;
 
 import com.nalamina.api.entity.PagamentoEntity;
+import com.nalamina.api.entity.enums.StatusPagamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,9 +17,11 @@ public interface PagamentoRepository extends JpaRepository<PagamentoEntity, UUID
 
     Optional<PagamentoEntity> findByAgendamentoEntity_Id(UUID agendamentoId);
 
-    boolean existsByAgendamentoEntity_Id(UUID agendamentoId);
+    boolean existsByAgendamentoEntity_IdAndStatusIn(UUID agendamentoId, List<StatusPagamento> status);
 
-    Optional<PagamentoEntity> findByPagarmeChargeId(String pagarmeChargeId);
+    Optional<PagamentoEntity> findByMercadoPagoPaymentId(String mercadoPagoPaymentId);
+
+    List<PagamentoEntity> findByStatusAndPixExpiraEmBefore(StatusPagamento status, LocalDateTime momento);
 
     @Query("SELECT DISTINCT p FROM PagamentoEntity p " +
            "JOIN FETCH p.agendamentoEntity a " +

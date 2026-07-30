@@ -4,15 +4,23 @@ import com.nalamina.api.dto.agendamento.AgendamentoRequest;
 import com.nalamina.api.dto.agendamento.AgendamentoResponse;
 import com.nalamina.api.dto.agendamento.PublicAgendamentoRequest;
 import com.nalamina.api.dto.agendamento.SlotDisponivel;
+import com.nalamina.api.dto.assinaturacliente.AssinarRequest;
+import com.nalamina.api.dto.assinaturacliente.AssinaturaResponse;
+import com.nalamina.api.dto.assinaturacliente.AssinaturaStatusPublicoResponse;
 import com.nalamina.api.dto.campeonato.CampeonatoResponse;
 import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
+import com.nalamina.api.dto.cliente.ClienteConhecidoResponse;
+import com.nalamina.api.dto.planoassinatura.PlanoAssinaturaResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
 import com.nalamina.api.dto.tenant.BarbeariaPublicaResponse;
 import com.nalamina.api.entity.TenantEntity;
 import com.nalamina.api.repository.ServicoRepository;
 import com.nalamina.api.repository.TenantRepository;
 import com.nalamina.api.service.AgendamentoService;
+import com.nalamina.api.service.AssinaturaClienteService;
 import com.nalamina.api.service.CampeonatoService;
+import com.nalamina.api.service.ClientePublicoService;
+import com.nalamina.api.service.PlanoAssinaturaService;
 import com.nalamina.api.service.SlotService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +47,9 @@ public class PublicController {
     private final ProfissionalRepository profissionalRepository;
     private final TenantRepository tenantRepository;
     private final CampeonatoService campeonatoService;
+    private final PlanoAssinaturaService planoAssinaturaService;
+    private final AssinaturaClienteService assinaturaClienteService;
+    private final ClientePublicoService clientePublicoService;
 
     private UUID resolverTenantId(String slug) {
         return resolverTenant(slug).getId();
@@ -133,5 +144,35 @@ public class PublicController {
     public ResponseEntity<List<RankingPublicoItemResponse>> ranking(@PathVariable String slug) {
         UUID tenantId = resolverTenantId(slug);
         return ResponseEntity.ok(campeonatoService.rankingPublico(tenantId));
+    }
+
+    @GetMapping("/planos")
+    public ResponseEntity<List<PlanoAssinaturaResponse>> planos(@PathVariable String slug) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(planoAssinaturaService.listarPublico(tenantId));
+    }
+
+    @GetMapping("/assinatura-status")
+    public ResponseEntity<AssinaturaStatusPublicoResponse> assinaturaStatus(
+            @PathVariable String slug,
+            @RequestParam String clienteTel) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(assinaturaClienteService.statusPublico(tenantId, clienteTel));
+    }
+
+    @PostMapping("/assinaturas")
+    public ResponseEntity<AssinaturaResponse> assinar(
+            @PathVariable String slug,
+            @Valid @RequestBody AssinarRequest request) {
+        TenantEntity tenant = resolverTenant(slug);
+        return ResponseEntity.status(201).body(assinaturaClienteService.assinar(tenant, request));
+    }
+
+    @GetMapping("/cliente")
+    public ResponseEntity<ClienteConhecidoResponse> cliente(
+            @PathVariable String slug,
+            @RequestParam String telefone) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(clientePublicoService.identificar(tenantId, telefone));
     }
 }

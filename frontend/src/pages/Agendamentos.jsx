@@ -586,7 +586,7 @@ export default function Agendamentos() {
               <label className="block text-xs font-medium text-slate-700 mb-1">Método de pagamento</label>
               <select className="input" value={metodo} onChange={e => setMetodo(e.target.value)}>
                 <option value="DINHEIRO">Dinheiro</option>
-                <option value="PIX">PIX (via Pagar.me)</option>
+                <option value="PIX">PIX (via Mercado Pago)</option>
                 <option value="CARTAO_CREDITO">Cartão de Crédito</option>
                 <option value="CARTAO_DEBITO">Cartão de Débito</option>
               </select>
@@ -606,6 +606,13 @@ export default function Agendamentos() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
               PIX gerado! O agendamento será concluído automaticamente quando o pagamento for confirmado.
             </div>
+            {pixData.pixQrCodeBase64 && (
+              <img
+                src={`data:image/png;base64,${pixData.pixQrCodeBase64}`}
+                alt="QR Code PIX"
+                className="mx-auto w-40 h-40 border border-slate-200 rounded-lg"
+              />
+            )}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
               <textarea readOnly className="input font-mono text-xs" rows={4} value={pixData.pixCopiaECola} />

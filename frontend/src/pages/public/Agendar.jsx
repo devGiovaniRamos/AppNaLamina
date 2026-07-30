@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone } from 'lucide-react';
+import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck } from 'lucide-react';
 import * as api from '../../api/public';
 
 const hoje = new Date().toISOString().split('T')[0];
@@ -11,6 +11,25 @@ export default function Agendar() {
   const [barbearia, setBarbearia] = useState(null);
   const [carregandoBarbearia, setCarregandoBarbearia] = useState(true);
   const [barbeariaNaoEncontrada, setBarbeariaNaoEncontrada] = useState(false);
+
+  // modo: 'identificacao' -> 'decisao' -> 'agendamento' | 'assinatura'
+  const [modo, setModo] = useState('identificacao');
+  // identStep (só dentro de 'identificacao'): 'telefone' -> 'nome' (só se for telefone novo)
+  const [identStep, setIdentStep] = useState('telefone');
+
+  const [clienteNome, setClienteNome] = useState('');
+  const [clienteTel, setClienteTel] = useState('');
+  const [telefoneInput, setTelefoneInput] = useState('');
+  const [verificando, setVerificando] = useState(false);
+  const [erroIdentificacao, setErroIdentificacao] = useState('');
+  const [saudacao, setSaudacao] = useState('');
+  const [statusAssinante, setStatusAssinante] = useState(null);
+  const [planosAtivos, setPlanosAtivos] = useState([]);
+
+  const [planoEscolhido, setPlanoEscolhido] = useState(null);
+  const [assinando, setAssinando] = useState(false);
+  const [erroAssinatura, setErroAssinatura] = useState('');
+  const [assinaturaCriada, setAssinaturaCriada] = useState(null);
 
   const [step, setStep] = useState(1);
 
@@ -25,8 +44,6 @@ export default function Agendar() {
   const [carregandoSlots, setCarregandoSlots] = useState(false);
   const [slot, setSlot] = useState(null);
 
-  const [clienteNome, setClienteNome] = useState('');
-  const [clienteTel, setClienteTel] = useState('');
   const [observacao, setObservacao] = useState('');
 
   const [enviando, setEnviando] = useState(false);
@@ -52,6 +69,88 @@ export default function Agendar() {
       .finally(() => setCarregandoSlots(false));
   }, [slug, servico, data]);
 
+  async function handleTelefoneSubmit(e) {
+    e.preventDefault();
+    setVerificando(true);
+    setErroIdentificacao('');
+    try {
+      const cliente = await api.identificarCliente(slug, telefoneInput);
+      setClienteTel(cliente.telefoneNormalizado);
+
+      if (cliente.conhecido) {
+        setClienteNome(cliente.nome);
+        setSaudacao(`Bem-vindo de volta, ${cliente.nome}! 👋`);
+        await continuarAposIdentificacao(cliente.telefoneNormalizado);
+      } else {
+        setIdentStep('nome');
+      }
+    } catch (err) {
+      setErroIdentificacao(err.response?.data?.message || 'Telefone inválido. Confira e tente novamente.');
+    } finally { setVerificando(false); }
+  }
+
+  async function handleNomeSubmit(e) {
+    e.preventDefault();
+    setVerificando(true);
+    setErroIdentificacao('');
+    try {
+      setSaudacao(`Bem-vindo, ${clienteNome}! Prazer em te conhecer. 👋`);
+      await continuarAposIdentificacao(clienteTel);
+    } finally { setVerificando(false); }
+  }
+
+  async function continuarAposIdentificacao(telefoneNormalizado) {
+    try {
+      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
+      setStatusAssinante(status);
+
+      if (status.assinante) {
+        setModo('decisao');
+        return;
+      }
+
+      const planos = await api.listarPlanos(slug);
+      setPlanosAtivos(planos);
+      if (planos.length > 0) {
+        setModo('decisao');
+      } else {
+        iniciarAgendamento();
+      }
+    } catch (err) {
+      setErroIdentificacao(err.response?.data?.message || 'Não foi possível continuar. Tente novamente.');
+    }
+  }
+
+  function iniciarAgendamento() {
+    setModo('agendamento');
+    setStep(1);
+  }
+
+  function voltarParaIdentificacao() {
+    setModo('identificacao');
+    setIdentStep('telefone');
+    setSaudacao('');
+    setErroIdentificacao('');
+  }
+
+  function iniciarAssinatura() {
+    setPlanoEscolhido(null);
+    setErroAssinatura('');
+    setModo('assinatura');
+  }
+
+  async function handleConfirmarAssinatura(e) {
+    e.preventDefault();
+    setAssinando(true);
+    setErroAssinatura('');
+    try {
+      const nova = await api.assinar(slug, { planoId: planoEscolhido.id, clienteNome, clienteTel });
+      setAssinaturaCriada(nova);
+    } catch (err) {
+      setErroAssinatura(err.response?.data?.message || 'Não foi possível iniciar a assinatura. Tente novamente.');
+    } finally { setAssinando(false); }
+  }
+
   function escolherServico(s) {
     setServico(s);
     setStep(2);
@@ -64,6 +163,15 @@ export default function Agendar() {
 
   function voltar() {
     setErro('');
+    if (step === 1) {
+      const semOfertaDeAssinatura = !statusAssinante?.assinante && planosAtivos.length === 0;
+      if (semOfertaDeAssinatura) {
+        voltarParaIdentificacao();
+      } else {
+        setModo('decisao');
+      }
+      return;
+    }
     setStep(s => Math.max(1, s - 1));
   }
 
@@ -141,120 +249,255 @@ export default function Agendar() {
       </header>
 
       <div className="max-w-md mx-auto p-4">
-        <div className="flex items-center gap-1.5 mb-5 px-1">
-          {[1, 2, 3, 4].map(n => (
-            <div key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-blue-600' : 'bg-slate-200'}`} />
-          ))}
-        </div>
-
-        {step > 1 && (
-          <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
-            <ChevronLeft size={16} /> Voltar
-          </button>
-        )}
-
-        {step === 1 && (
-          <div className="space-y-3">
-            <h2 className="font-semibold text-slate-800 mb-2">Escolha o serviço</h2>
-            {servicos.map(s => (
-              <button key={s.id} onClick={() => escolherServico(s)}
-                className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-slate-800">{s.nome}</span>
-                  <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
-                </div>
-                {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
-                <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
-              </button>
-            ))}
-            {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-3">
-            <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
-            <button onClick={() => escolherProfissional(null)}
-              className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors font-medium text-slate-700">
-              Sem preferência
+        {modo === 'identificacao' && identStep === 'telefone' && (
+          <form onSubmit={handleTelefoneSubmit} className="space-y-4">
+            <h2 className="font-semibold text-slate-800">Olá! 👋</h2>
+            <p className="text-sm text-slate-500">Informe seu telefone para começar.</p>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <input className="input" required autoFocus type="tel" placeholder="(21) 99999-9999"
+                value={telefoneInput} onChange={e => setTelefoneInput(e.target.value)} />
+            </div>
+            {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
+            <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
+              {verificando ? 'Verificando...' : 'Continuar'}
             </button>
-            {profissionais.map(p => (
-              <button key={p.id} onClick={() => escolherProfissional(p)}
-                className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors flex items-center gap-3">
-                {p.fotoUrl ? (
-                  <img src={p.fotoUrl} alt={p.nome} className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User size={18} /></div>
-                )}
-                <span className="font-medium text-slate-800">{p.nome}</span>
+          </form>
+        )}
+
+        {modo === 'identificacao' && identStep === 'nome' && (
+          <form onSubmit={handleNomeSubmit} className="space-y-4">
+            <button type="button" onClick={() => setIdentStep('telefone')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+            <h2 className="font-semibold text-slate-800">Prazer em te conhecer!</h2>
+            <p className="text-sm text-slate-500">Não te encontramos por aqui ainda — como podemos te chamar?</p>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+              <input className="input" required autoFocus value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
+            </div>
+            {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
+            <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
+              {verificando ? 'Verificando...' : 'Continuar'}
+            </button>
+          </form>
+        )}
+
+        {modo === 'decisao' && (
+          <div className="space-y-4">
+            <button onClick={voltarParaIdentificacao} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+
+            {saudacao && (
+              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">{saudacao}</p>
+            )}
+
+            {statusAssinante?.assinante ? (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 text-center">
+                <BadgeCheck size={32} className="text-green-500 mx-auto mb-2" />
+                <p className="font-semibold text-slate-800">Você é assinante do plano {statusAssinante.planoNome}</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {statusAssinante.diasRestantes != null && statusAssinante.diasRestantes >= 0
+                    ? `Faltam ${statusAssinante.diasRestantes} dia(s) para renovar.`
+                    : 'Sua assinatura está vencida — fale com a barbearia para renovar.'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+                <p className="font-semibold text-slate-800 mb-1 flex items-center gap-2"><BadgeCheck size={18} /> Que tal assinar um plano?</p>
+                <p className="text-sm text-slate-500">Esta barbearia tem planos de assinatura com benefícios exclusivos.</p>
+              </div>
+            )}
+
+            <button onClick={iniciarAgendamento} className="btn-primary w-full">Agendar um horário</button>
+
+            {!statusAssinante?.assinante && (
+              <button onClick={iniciarAssinatura}
+                className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2">
+                Ver planos de assinatura
               </button>
-            ))}
+            )}
           </div>
         )}
 
-        {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
-            <input type="date" min={hoje} value={data} onChange={e => setData(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        {modo === 'assinatura' && !assinaturaCriada && (
+          <div className="space-y-3">
+            <button onClick={() => { setModo('decisao'); setPlanoEscolhido(null); }} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
 
-            {carregandoSlots ? (
-              <p className="text-slate-400 text-sm text-center py-6">Buscando horários...</p>
-            ) : slots.length === 0 ? (
-              <p className="text-slate-400 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
+            {!planoEscolhido ? (
+              <>
+                <h2 className="font-semibold text-slate-800 mb-2">Escolha um plano</h2>
+                {planosAtivos.map(p => (
+                  <button key={p.id} onClick={() => setPlanoEscolhido(p)}
+                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-800">{p.nome}</span>
+                      <span className="font-semibold text-slate-800">{fmt(p.precoMensal)}/mês</span>
+                    </div>
+                    {p.descricao && <p className="text-xs text-slate-500 mt-1.5 whitespace-pre-line">{p.descricao}</p>}
+                  </button>
+                ))}
+                {planosAtivos.length === 0 && (
+                  <p className="text-slate-400 text-sm text-center py-8">Nenhum plano de assinatura disponível no momento.</p>
+                )}
+              </>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {slots.map(s => (
-                  <button key={s.horaInicio}
-                    onClick={() => setSlot(s)}
-                    className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                      slot?.horaInicio === s.horaInicio
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
-                    }`}>
-                    {fmtHora(s.horaInicio)}
+              <form onSubmit={handleConfirmarAssinatura} className="space-y-4">
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-slate-800">{planoEscolhido.nome}</span>
+                    <span className="font-semibold text-slate-800">{fmt(planoEscolhido.precoMensal)}/mês</span>
+                  </div>
+                  {planoEscolhido.descricao && <p className="text-xs text-slate-500 whitespace-pre-line">{planoEscolhido.descricao}</p>}
+                </div>
+                {erroAssinatura && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroAssinatura}</p>}
+                <button type="submit" disabled={assinando} className="btn-primary w-full disabled:opacity-50">
+                  {assinando ? 'Gerando pagamento...' : 'Assinar e pagar com PIX'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {modo === 'assinatura' && assinaturaCriada && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="text-center mb-4">
+              <BadgeCheck size={40} className="text-blue-600 mx-auto mb-2" />
+              <h1 className="text-lg font-bold text-slate-800">PIX gerado!</h1>
+              <p className="text-slate-500 text-sm mt-1">
+                Sua assinatura do plano <span className="font-medium">{assinaturaCriada.planoNome}</span> será ativada
+                automaticamente assim que o pagamento for confirmado.
+              </p>
+            </div>
+            {assinaturaCriada.pixQrCodeBase64 && (
+              <img
+                src={`data:image/png;base64,${assinaturaCriada.pixQrCodeBase64}`}
+                alt="QR Code PIX"
+                className="mx-auto w-48 h-48 border border-slate-200 rounded-lg mb-4"
+              />
+            )}
+            <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
+            <textarea readOnly className="input font-mono text-xs" rows={4} value={assinaturaCriada.pixCopiaECola} />
+          </div>
+        )}
+
+        {modo === 'agendamento' && (
+          <>
+            <div className="flex items-center gap-1.5 mb-5 px-1">
+              {[1, 2, 3, 4].map(n => (
+                <div key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-blue-600' : 'bg-slate-200'}`} />
+              ))}
+            </div>
+
+            <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+
+            {step === 1 && saudacao && (
+              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-3">{saudacao}</p>
+            )}
+
+            {step === 1 && (
+              <div className="space-y-3">
+                <h2 className="font-semibold text-slate-800 mb-2">Escolha o serviço</h2>
+                {servicos.map(s => (
+                  <button key={s.id} onClick={() => escolherServico(s)}
+                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-800">{s.nome}</span>
+                      <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
+                    </div>
+                    {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
+                    <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
+                  </button>
+                ))}
+                {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-3">
+                <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
+                <button onClick={() => escolherProfissional(null)}
+                  className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors font-medium text-slate-700">
+                  Sem preferência
+                </button>
+                {profissionais.map(p => (
+                  <button key={p.id} onClick={() => escolherProfissional(p)}
+                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors flex items-center gap-3">
+                    {p.fotoUrl ? (
+                      <img src={p.fotoUrl} alt={p.nome} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User size={18} /></div>
+                    )}
+                    <span className="font-medium text-slate-800">{p.nome}</span>
                   </button>
                 ))}
               </div>
             )}
 
-            <button disabled={!slot} onClick={() => setStep(4)}
-              className="btn-primary w-full disabled:opacity-50">
-              Continuar
-            </button>
-          </div>
-        )}
+            {step === 3 && (
+              <div className="space-y-4">
+                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
+                <input type="date" min={hoje} value={data} onChange={e => setData(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
-        {step === 4 && (
-          <form onSubmit={confirmar} className="space-y-4">
-            <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Clock size={16} /> Seus dados</h2>
+                {carregandoSlots ? (
+                  <p className="text-slate-400 text-sm text-center py-6">Buscando horários...</p>
+                ) : slots.length === 0 ? (
+                  <p className="text-slate-400 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {slots.map(s => (
+                      <button key={s.horaInicio}
+                        onClick={() => setSlot(s)}
+                        className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                          slot?.horaInicio === s.horaInicio
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                        }`}>
+                        {fmtHora(s.horaInicio)}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-sm space-y-1">
-              <p><span className="text-slate-400">Serviço:</span> {servico.nome}</p>
-              <p><span className="text-slate-400">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
-              <p><span className="text-slate-400">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
-              {profissional && <p><span className="text-slate-400">Profissional:</span> {profissional.nome}</p>}
-            </div>
+                <button disabled={!slot} onClick={() => setStep(4)}
+                  className="btn-primary w-full disabled:opacity-50">
+                  Continuar
+                </button>
+              </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
-              <input className="input" required value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
-              <input className="input" required placeholder="(21) 99999-9999" value={clienteTel} onChange={e => setClienteTel(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Observação (opcional)</label>
-              <textarea className="input" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} />
-            </div>
+            {step === 4 && (
+              <form onSubmit={confirmar} className="space-y-4">
+                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Clock size={16} /> Confirme seu agendamento</h2>
 
-            {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-sm space-y-1">
+                  <p><span className="text-slate-400">Nome:</span> {clienteNome}</p>
+                  <p><span className="text-slate-400">Telefone:</span> {clienteTel}</p>
+                  <p><span className="text-slate-400">Serviço:</span> {servico.nome}</p>
+                  <p><span className="text-slate-400">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
+                  <p><span className="text-slate-400">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
+                  {profissional && <p><span className="text-slate-400">Profissional:</span> {profissional.nome}</p>}
+                </div>
 
-            <button type="submit" disabled={enviando} className="btn-primary w-full disabled:opacity-50">
-              {enviando ? 'Confirmando...' : 'Confirmar agendamento'}
-            </button>
-          </form>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Observação (opcional)</label>
+                  <textarea className="input" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} />
+                </div>
+
+                {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
+
+                <button type="submit" disabled={enviando} className="btn-primary w-full disabled:opacity-50">
+                  {enviando ? 'Confirmando...' : 'Confirmar agendamento'}
+                </button>
+              </form>
+            )}
+          </>
         )}
       </div>
     </div>
