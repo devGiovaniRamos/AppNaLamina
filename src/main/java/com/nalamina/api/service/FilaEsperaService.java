@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +42,9 @@ public class FilaEsperaService {
         ServicoEntity servico = servicoRepository.findByIdAndTenantEntity_Id(request.getServicoId(), tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"));
 
-        int proximoTicket = filaEsperaRepository.buscarMaiorTicketDoDia(tenantId, LocalDate.now().atStartOfDay())
-                .map(n -> n + 1).orElse(1);
+        // Senha reflete quantas pessoas estão ativas na fila agora (aguardando + sendo atendidas),
+        // não um contador do dia — volta pra #1 sempre que a fila esvaziar.
+        int proximoTicket = (int) filaEsperaRepository.countByTenantEntity_IdAndStatusIn(tenantId, STATUS_ATIVOS) + 1;
 
         FilaEsperaEntity ticket = FilaEsperaEntity.builder()
                 .tenantEntity(servico.getTenantEntity())
