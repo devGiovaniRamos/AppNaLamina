@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck } from 'lucide-react';
+import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck, Ticket } from 'lucide-react';
 import * as api from '../../api/public';
 
 const hoje = new Date().toISOString().split('T')[0];
@@ -30,6 +30,11 @@ export default function Agendar() {
   const [assinando, setAssinando] = useState(false);
   const [erroAssinatura, setErroAssinatura] = useState('');
   const [assinaturaCriada, setAssinaturaCriada] = useState(null);
+
+  const [filaAtiva, setFilaAtiva] = useState(null);
+  const [filaConcluida, setFilaConcluida] = useState(false);
+  const [entrandoFila, setEntrandoFila] = useState(false);
+  const [erroFila, setErroFila] = useState('');
 
   const [step, setStep] = useState(1);
 
@@ -101,21 +106,20 @@ export default function Agendar() {
 
   async function continuarAposIdentificacao(telefoneNormalizado) {
     try {
-      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
-      setStatusAssinante(status);
-
-      if (status.assinante) {
-        setModo('decisao');
+      const ticket = await api.statusFila(slug, telefoneNormalizado);
+      if (ticket) {
+        setFilaAtiva(ticket);
+        setModo('fila');
         return;
       }
 
+      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
+      setStatusAssinante(status);
+
       const planos = await api.listarPlanos(slug);
       setPlanosAtivos(planos);
-      if (planos.length > 0) {
-        setModo('decisao');
-      } else {
-        iniciarAgendamento();
-      }
+
+      setModo('decisao');
     } catch (err) {
       setErroIdentificacao(err.response?.data?.message || 'Não foi possível continuar. Tente novamente.');
     }
@@ -138,6 +142,50 @@ export default function Agendar() {
     setErroAssinatura('');
     setModo('assinatura');
   }
+
+  function iniciarFila() {
+    setFilaAtiva(null);
+    setFilaConcluida(false);
+    setErroFila('');
+    setModo('fila');
+  }
+
+  async function handleEntrarNaFila(s) {
+    setEntrandoFila(true);
+    setErroFila('');
+    try {
+      const ticket = await api.entrarNaFila(slug, { servicoId: s.id, clienteNome, clienteTel });
+      setFilaAtiva(ticket);
+    } catch (err) {
+      setErroFila(err.response?.data?.message || 'Não foi possível entrar na fila. Tente novamente.');
+    } finally { setEntrandoFila(false); }
+  }
+
+  async function handleSairDaFila() {
+    if (!confirm('Sair da fila de espera?')) return;
+    try {
+      await api.sairDaFila(slug, filaAtiva.id, clienteTel);
+    } catch {
+      // mesmo se der erro de rede aqui, tira o cliente da tela de espera — ele pediu pra sair
+    }
+    setFilaAtiva(null);
+    setFilaConcluida(false);
+    setModo('decisao');
+  }
+
+  useEffect(() => {
+    if (modo !== 'fila' || !filaAtiva) return;
+    const intervalo = setInterval(async () => {
+      try {
+        const atualizado = await api.statusFila(slug, clienteTel);
+        if (!atualizado) setFilaConcluida(true);
+        setFilaAtiva(atualizado);
+      } catch {
+        // se a rede falhar num ciclo, só tenta de novo no próximo poll
+      }
+    }, 20000);
+    return () => clearInterval(intervalo);
+  }, [modo, filaAtiva?.id, slug, clienteTel]);
 
   async function handleConfirmarAssinatura(e) {
     e.preventDefault();
@@ -164,12 +212,7 @@ export default function Agendar() {
   function voltar() {
     setErro('');
     if (step === 1) {
-      const semOfertaDeAssinatura = !statusAssinante?.assinante && planosAtivos.length === 0;
-      if (semOfertaDeAssinatura) {
-        voltarParaIdentificacao();
-      } else {
-        setModo('decisao');
-      }
+      setModo('decisao');
       return;
     }
     setStep(s => Math.max(1, s - 1));
@@ -303,7 +346,7 @@ export default function Agendar() {
                     : 'Sua assinatura está vencida — fale com a barbearia para renovar.'}
                 </p>
               </div>
-            ) : (
+            ) : planosAtivos.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
                 <p className="font-semibold text-slate-800 mb-1 flex items-center gap-2"><BadgeCheck size={18} /> Que tal assinar um plano?</p>
                 <p className="text-sm text-slate-500">Esta barbearia tem planos de assinatura com benefícios exclusivos.</p>
@@ -312,7 +355,12 @@ export default function Agendar() {
 
             <button onClick={iniciarAgendamento} className="btn-primary w-full">Agendar um horário</button>
 
-            {!statusAssinante?.assinante && (
+            <button onClick={iniciarFila}
+              className="w-full flex items-center justify-center gap-2 border border-slate-200 text-slate-700 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors">
+              <Ticket size={16} /> Entrar na fila de espera
+            </button>
+
+            {!statusAssinante?.assinante && planosAtivos.length > 0 && (
               <button onClick={iniciarAssinatura}
                 className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2">
                 Ver planos de assinatura
@@ -381,6 +429,56 @@ export default function Agendar() {
             )}
             <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
             <textarea readOnly className="input font-mono text-xs" rows={4} value={assinaturaCriada.pixCopiaECola} />
+          </div>
+        )}
+
+        {modo === 'fila' && !filaAtiva && !filaConcluida && (
+          <div className="space-y-3">
+            <button onClick={() => setModo('decisao')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+            <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><Ticket size={16} /> Escolha o serviço</h2>
+            {servicos.map(s => (
+              <button key={s.id} onClick={() => handleEntrarNaFila(s)} disabled={entrandoFila}
+                className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors disabled:opacity-50">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-800">{s.nome}</span>
+                  <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
+                </div>
+                {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
+              </button>
+            ))}
+            {erroFila && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroFila}</p>}
+            {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+          </div>
+        )}
+
+        {modo === 'fila' && filaAtiva && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
+            <Ticket size={40} className="text-blue-600 mx-auto mb-3" />
+            <p className="text-xs text-slate-400 uppercase tracking-wide">Sua senha</p>
+            <p className="text-4xl font-bold text-slate-800 mb-3">#{filaAtiva.numeroTicket}</p>
+            {filaAtiva.status === 'EM_ATENDIMENTO' ? (
+              <p className="text-green-600 font-medium">É a sua vez! Dirija-se ao balcão. 🎉</p>
+            ) : (
+              <>
+                <p className="text-slate-600">
+                  {filaAtiva.pessoasNaFrente === 0 ? 'Você é o próximo!' : `${filaAtiva.pessoasNaFrente} pessoa(s) na sua frente`}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Serviço: {filaAtiva.servicoNome}</p>
+              </>
+            )}
+            <button onClick={handleSairDaFila} className="mt-6 text-sm text-red-600 hover:text-red-700">
+              Sair da fila
+            </button>
+          </div>
+        )}
+
+        {modo === 'fila' && filaConcluida && !filaAtiva && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
+            <CheckCircle2 size={40} className="text-green-500 mx-auto mb-3" />
+            <p className="font-semibold text-slate-800">Atendimento concluído!</p>
+            <p className="text-sm text-slate-500 mt-1">Obrigado por aguardar.</p>
           </div>
         )}
 

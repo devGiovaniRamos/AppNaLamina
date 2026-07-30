@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Trophy, BadgeCheck, Settings, LogOut } from 'lucide-react';
+import { Calendar, Scissors, Users, CreditCard, Boxes, ShoppingCart, Trophy, BadgeCheck, Ticket, Settings, LogOut } from 'lucide-react';
 import NotificacaoSino from './NotificacaoSino';
 
 const navItems = [
   { to: '/agendamentos', icon: Calendar, label: 'Agendamentos' },
+  { to: '/fila', icon: Ticket, label: 'Fila de Espera' },
   { to: '/servicos', icon: Scissors, label: 'Serviços' },
   { to: '/profissionais', icon: Users, label: 'Profissionais' },
   { to: '/pagamentos', icon: CreditCard, label: 'Pagamentos' },

@@ -74,3 +74,9 @@ export const alternarAtivoPlano = (id, ativo) => api.patch(`/planos/${id}/ativo`
 // Assinaturas de clientes (admin)
 export const listarAssinaturas = () => api.get('/assinaturas').then(r => r.data);
 export const renovarAssinatura = (id) => api.post(`/assinaturas/${id}/renovar`).then(r => r.data);
+
+// Fila de espera (admin)
+export const listarFila = () => api.get('/fila').then(r => r.data);
+export const chamarDaFila = (id) => api.post(`/fila/${id}/chamar`).then(r => r.data);
+export const finalizarFila = (id) => api.post(`/fila/${id}/finalizar`).then(r => r.data);
+export const removerDaFila = (id) => api.post(`/fila/${id}/remover`).then(r => r.data);

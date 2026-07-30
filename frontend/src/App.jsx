@@ -10,6 +10,7 @@ import Estoque from './pages/Estoque';
 import Venda from './pages/Venda';
 import Campeonato from './pages/Campeonato';
 import Assinaturas from './pages/Assinaturas';
+import Fila from './pages/Fila';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
 import Agendar from './pages/public/Agendar';
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="venda" element={<Venda />} />
             <Route path="campeonato" element={<Campeonato />} />
             <Route path="assinaturas" element={<Assinaturas />} />
+            <Route path="fila" element={<Fila />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
