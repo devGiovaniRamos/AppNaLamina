@@ -29,6 +29,7 @@ public class FilaEsperaService {
 
     private final FilaEsperaRepository filaEsperaRepository;
     private final ServicoRepository servicoRepository;
+    private final NotificacaoAdminService notificacaoAdminService;
 
     @Transactional
     public FilaTicketResponse entrar(UUID tenantId, EntrarFilaRequest request) {
@@ -55,6 +56,7 @@ public class FilaEsperaService {
                 .build();
 
         filaEsperaRepository.save(ticket);
+        notificacaoAdminService.notificarEntradaFila(tenantId, ticket);
         return buscarComPosicao(ticket.getId(), tenantId);
     }
 

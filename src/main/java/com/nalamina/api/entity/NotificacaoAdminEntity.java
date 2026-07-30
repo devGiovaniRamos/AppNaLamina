@@ -26,8 +26,12 @@ public class NotificacaoAdminEntity {
     private TenantEntity tenantEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "agendamento_id", nullable = false)
+    @JoinColumn(name = "agendamento_id")
     private AgendamentoEntity agendamentoEntity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fila_espera_id")
+    private FilaEsperaEntity filaEsperaEntity;
 
     @Column(nullable = false, length = 100)
     private String titulo;

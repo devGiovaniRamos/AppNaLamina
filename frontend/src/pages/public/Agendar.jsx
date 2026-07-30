@@ -455,19 +455,28 @@ export default function Agendar() {
 
         {modo === 'fila' && filaAtiva && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-            <Ticket size={40} className="text-blue-600 mx-auto mb-3" />
-            <p className="text-xs text-slate-400 uppercase tracking-wide">Sua senha</p>
-            <p className="text-4xl font-bold text-slate-800 mb-3">#{filaAtiva.numeroTicket}</p>
+            <div className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-500 text-xs font-medium px-3 py-1 rounded-full mb-1">
+              <Ticket size={13} /> Senha #{filaAtiva.numeroTicket}
+            </div>
+
             {filaAtiva.status === 'EM_ATENDIMENTO' ? (
-              <p className="text-green-600 font-medium">É a sua vez! Dirija-se ao balcão. 🎉</p>
+              <div className="my-6">
+                <p className="text-3xl font-extrabold text-green-600 leading-tight">É a sua vez!</p>
+                <p className="text-slate-500 text-sm mt-2">Dirija-se ao balcão 🎉</p>
+              </div>
             ) : (
-              <>
-                <p className="text-slate-600">
-                  {filaAtiva.pessoasNaFrente === 0 ? 'Você é o próximo!' : `${filaAtiva.pessoasNaFrente} pessoa(s) na sua frente`}
+              <div className="my-5">
+                <p className="text-7xl font-extrabold text-blue-600 leading-none tabular-nums">
+                  {filaAtiva.pessoasNaFrente}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Serviço: {filaAtiva.servicoNome}</p>
-              </>
+                <p className="text-sm font-semibold text-slate-700 mt-3">
+                  {filaAtiva.pessoasNaFrente === 0 ? 'Você é o próximo!' : 'pessoa(s) na sua frente'}
+                </p>
+              </div>
             )}
+
+            <p className="text-xs text-slate-400">Serviço: {filaAtiva.servicoNome}</p>
+
             <button onClick={handleSairDaFila} className="mt-6 text-sm text-red-600 hover:text-red-700">
               Sair da fila
             </button>

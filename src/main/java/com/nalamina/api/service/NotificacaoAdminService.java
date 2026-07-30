@@ -3,6 +3,7 @@ package com.nalamina.api.service;
 import com.nalamina.api.dto.agendamento.AgendamentoResponse;
 import com.nalamina.api.dto.notificacao.ContagemNaoLidasResponse;
 import com.nalamina.api.dto.notificacao.NotificacaoAdminResponse;
+import com.nalamina.api.entity.FilaEsperaEntity;
 import com.nalamina.api.entity.NotificacaoAdminEntity;
 import com.nalamina.api.repository.AgendamentoRepository;
 import com.nalamina.api.repository.NotificacaoAdminRepository;
@@ -45,6 +46,19 @@ public class NotificacaoAdminService {
                 .build());
     }
 
+    @Transactional
+    public void notificarEntradaFila(UUID tenantId, FilaEsperaEntity ticket) {
+        String mensagem = "%s entrou na fila de espera (senha #%d) para %s".formatted(
+                ticket.getClienteNome(), ticket.getNumeroTicket(), ticket.getServicoEntity().getNome());
+
+        notificacaoAdminRepository.save(NotificacaoAdminEntity.builder()
+                .tenantEntity(tenantRepository.getReferenceById(tenantId))
+                .filaEsperaEntity(ticket)
+                .titulo("Nova entrada na fila")
+                .mensagem(mensagem)
+                .build());
+    }
+
     @Transactional(readOnly = true)
     public List<NotificacaoAdminResponse> listar() {
         UUID tenantId = TenantContextHolder.getTenantId();
@@ -80,7 +94,8 @@ public class NotificacaoAdminService {
     private NotificacaoAdminResponse toResponse(NotificacaoAdminEntity n) {
         return NotificacaoAdminResponse.builder()
                 .id(n.getId())
-                .agendamentoId(n.getAgendamentoEntity().getId())
+                .agendamentoId(n.getAgendamentoEntity() != null ? n.getAgendamentoEntity().getId() : null)
+                .filaEsperaId(n.getFilaEsperaEntity() != null ? n.getFilaEsperaEntity().getId() : null)
                 .titulo(n.getTitulo())
                 .mensagem(n.getMensagem())
                 .lida(n.getLida())

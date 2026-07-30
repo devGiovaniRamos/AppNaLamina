@@ -46,7 +46,9 @@ export default function NotificacaoSino() {
         setNaoLidas(prev => Math.max(0, prev - 1));
       } catch { /* ignora falha ao marcar, agendamento ainda é aberto normalmente */ }
     }
-    navigate(n.agendamentoId ? `/agendamentos?agendamentoId=${n.agendamentoId}` : '/agendamentos');
+    if (n.agendamentoId) navigate(`/agendamentos?agendamentoId=${n.agendamentoId}`);
+    else if (n.filaEsperaId) navigate('/fila');
+    else navigate('/agendamentos');
   }
 
   async function handleMarcarTodas(e) {
