@@ -74,8 +74,8 @@ export default function Servicos() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Serviços</h1>
-          <p className="text-slate-500 text-sm mt-1">{servicos.length} serviço(s) ativo(s)</p>
+          <h1 className="text-2xl font-serif font-semibold text-stone-50">Serviços</h1>
+          <p className="text-stone-400 text-sm mt-1">{servicos.length} serviço(s) ativo(s)</p>
         </div>
         <button onClick={abrirCriar} className="flex items-center gap-2 btn-primary">
           <Plus size={16} /> Novo serviço
@@ -83,37 +83,37 @@ export default function Servicos() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Carregando...</div>
+        <div className="text-center py-16 text-stone-500">Carregando...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-stone-800/60 border-b border-stone-800">
               <tr>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Nome</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Duração</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">Preço</th>
+                <th className="text-left px-4 py-3 text-stone-400 font-medium">Nome</th>
+                <th className="text-left px-4 py-3 text-stone-400 font-medium">Duração</th>
+                <th className="text-left px-4 py-3 text-stone-400 font-medium">Preço</th>
                 <th className="px-4 py-3 w-20"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-stone-800">
               {servicos.map(s => (
-                <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={s.id} className="hover:bg-stone-800/60 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-800">{s.nome}</p>
-                    {s.descricao && <p className="text-slate-400 text-xs mt-0.5">{s.descricao}</p>}
+                    <p className="font-medium text-stone-50">{s.nome}</p>
+                    {s.descricao && <p className="text-stone-500 text-xs mt-0.5">{s.descricao}</p>}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{s.duracaoMin} min</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-stone-300">{s.duracaoMin} min</td>
+                  <td className="px-4 py-3 text-stone-300">
                     R$ {Number(s.preco).toFixed(2)}
                     {s.precoAgendamento != null && (
-                      <p className="text-xs text-blue-500 mt-0.5">Agendamento: R$ {Number(s.precoAgendamento).toFixed(2)}</p>
+                      <p className="text-xs text-gold-400 mt-0.5">Agendamento: R$ {Number(s.precoAgendamento).toFixed(2)}</p>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => abrirEditar(s)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg mr-1">
+                    <button onClick={() => abrirEditar(s)} className="p-1.5 text-stone-500 hover:text-gold-400 hover:bg-gold-500/10 rounded-lg mr-1">
                       <Pencil size={15} />
                     </button>
-                    <button onClick={() => handleDesativar(s.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => handleDesativar(s.id)} className="p-1.5 text-stone-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg">
                       <Trash2 size={15} />
                     </button>
                   </td>
@@ -122,7 +122,7 @@ export default function Servicos() {
             </tbody>
           </table>
           {servicos.length === 0 && (
-            <div className="text-center py-12 text-slate-400">Nenhum serviço cadastrado</div>
+            <div className="text-center py-12 text-stone-500">Nenhum serviço cadastrado</div>
           )}
         </div>
       )}
@@ -130,30 +130,30 @@ export default function Servicos() {
       <Modal open={modal} onClose={() => setModal(false)} title={editando ? 'Editar Serviço' : 'Novo Serviço'}>
         <form onSubmit={handleSalvar} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Nome *</label>
             <input className="input" required value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Descrição</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Descrição</label>
             <textarea className="input" rows={2} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Duração (min) *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Duração (min) *</label>
               <input type="number" className="input" required min={1} value={form.duracaoMin} onChange={e => setForm({ ...form, duracaoMin: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Preço (R$) *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Preço (R$) *</label>
               <input type="number" className="input" required min={0} step={0.01} value={form.preco} onChange={e => setForm({ ...form, preco: e.target.value })} />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Preço para agendamento (R$)</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Preço para agendamento (R$)</label>
             <input type="number" className="input" min={0} step={0.01} placeholder="Deixe em branco para usar o preço normal"
               value={form.precoAgendamento} onChange={e => setForm({ ...form, precoAgendamento: e.target.value })} />
-            <p className="text-xs text-slate-400 mt-1">Opcional — use se quiser cobrar diferente de quem reserva com hora marcada.</p>
+            <p className="text-xs text-stone-500 mt-1">Opcional — use se quiser cobrar diferente de quem reserva com hora marcada.</p>
           </div>
-          {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{error}</p>}
+          {error && <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setModal(false)} className="btn-ghost">Cancelar</button>
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Salvando...' : 'Salvar'}</button>
