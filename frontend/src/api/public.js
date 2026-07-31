@@ -12,3 +12,8 @@ export const listarPlanos = (slug) => api.get(`/public/${slug}/planos`).then(r =
 export const assinaturaStatus = (slug, clienteTel) =>
   api.get(`/public/${slug}/assinatura-status`, { params: { clienteTel } }).then(r => r.data);
 export const assinar = (slug, data) => api.post(`/public/${slug}/assinaturas`, data).then(r => r.data);
+export const entrarNaFila = (slug, data) => api.post(`/public/${slug}/fila`, data).then(r => r.data);
+export const statusFila = (slug, clienteTel) =>
+  api.get(`/public/${slug}/fila/status`, { params: { clienteTel } }).then(r => r.data);
+export const sairDaFila = (slug, id, clienteTel) =>
+  api.delete(`/public/${slug}/fila/${id}`, { params: { clienteTel } }).then(r => r.data);

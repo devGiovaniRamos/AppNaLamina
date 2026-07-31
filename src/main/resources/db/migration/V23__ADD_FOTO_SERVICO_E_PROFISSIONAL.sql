@@ -1,0 +1,2 @@
+ALTER TABLE profissional ALTER COLUMN foto_url TYPE TEXT;
+ALTER TABLE servico ADD COLUMN IF NOT EXISTS foto_url TEXT;

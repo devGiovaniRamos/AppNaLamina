@@ -53,7 +53,7 @@ public class PagamentoService {
 
     private BigDecimal somarValorServicos(AgendamentoEntity agendamento) {
         return agendamento.getServicos().stream()
-                .map(ServicoEntity::getPreco)
+                .map(s -> s.getPrecoAgendamento() != null ? s.getPrecoAgendamento() : s.getPreco())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

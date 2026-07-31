@@ -6,10 +6,10 @@ import Modal from '../components/Modal';
 
 const STATUS_LABEL = { PENDENTE: 'Pendente', CONFIRMADO: 'Confirmado', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' };
 const STATUS_COLOR = {
-  PENDENTE: 'bg-yellow-100 text-yellow-800',
-  CONFIRMADO: 'bg-blue-100 text-blue-800',
-  CONCLUIDO: 'bg-green-100 text-green-800',
-  CANCELADO: 'bg-gray-100 text-gray-500',
+  PENDENTE: 'bg-amber-500/15 text-amber-400',
+  CONFIRMADO: 'bg-gold-500/15 text-gold-300',
+  CONCLUIDO: 'bg-emerald-500/15 text-emerald-400',
+  CANCELADO: 'bg-stone-700/60 text-stone-400',
 };
 
 const FILTROS_STATUS = [
@@ -70,7 +70,7 @@ function slotOcupado(slot, agendamentos, profissionalId) {
 function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect }) {
   if (slots === null) {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-50 rounded-lg p-3">
+      <div className="flex items-center gap-2 text-sm text-stone-500 bg-stone-800/60 rounded-lg p-3">
         <Clock size={14} />
         Selecione um serviço para ver os horários disponíveis
       </div>
@@ -78,7 +78,7 @@ function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect })
   }
   if (slots.length === 0) {
     return (
-      <div className="text-sm text-slate-400 bg-slate-50 rounded-lg p-3">
+      <div className="text-sm text-stone-500 bg-stone-800/60 rounded-lg p-3">
         Este dia não possui horários disponíveis
       </div>
     );
@@ -96,10 +96,10 @@ function SlotPicker({ slots, selected, agendamentos, profissionalId, onSelect })
             onClick={() => onSelect(slot)}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors
               ${ocupado
-                ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                ? 'bg-stone-800 text-stone-400 border-stone-800 cursor-not-allowed line-through'
                 : ativo
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                  ? 'bg-gold-500 text-stone-900 border-gold-500 shadow-sm'
+                  : 'bg-stone-900 text-stone-200 border-stone-700 hover:border-gold-500/50 hover:text-gold-400'
               }`}
           >
             {slot.inicio}
@@ -331,8 +331,8 @@ export default function Agendamentos() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Agendamentos</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-serif font-semibold text-stone-50">Agendamentos</h1>
+          <p className="text-stone-400 text-sm mt-1">
             {filtrados.length} agendamento(s) {ignorarData ? 'pendente(s) (todas as datas)' : 'no dia'}
           </p>
         </div>
@@ -345,7 +345,7 @@ export default function Agendamentos() {
       </div>
 
       {loadError && (
-        <div className="flex items-center justify-between gap-3 mb-5 bg-red-50 border border-red-100 text-red-700 text-sm rounded-lg px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3 mb-5 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-4 py-2.5">
           <span>Não foi possível carregar todos os dados (agendamentos, serviços, profissionais ou pagamentos). Alguns campos podem aparecer vazios.</span>
           <button onClick={carregarDados} className="font-medium underline shrink-0">Tentar novamente</button>
         </div>
@@ -353,14 +353,14 @@ export default function Agendamentos() {
 
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-2">
-          <Calendar size={16} className="text-slate-400" />
+          <Calendar size={16} className="text-stone-500" />
           <input
             type="date"
             value={dataFiltro}
             onChange={e => setDataFiltro(e.target.value)}
             disabled={ignorarData}
             title={ignorarData ? 'Pendentes mostra todas as datas' : undefined}
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="border border-stone-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 disabled:opacity-40 disabled:cursor-not-allowed"
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -369,7 +369,7 @@ export default function Agendamentos() {
               key={f.value}
               onClick={() => setStatusFiltro(f.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                statusFiltro === f.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                statusFiltro === f.value ? 'bg-gold-500 text-stone-900' : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
               }`}
             >
               {f.label}
@@ -379,9 +379,9 @@ export default function Agendamentos() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Carregando...</div>
+        <div className="text-center py-16 text-stone-500">Carregando...</div>
       ) : filtrados.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">Nenhum agendamento neste dia</div>
+        <div className="text-center py-16 text-stone-500">Nenhum agendamento neste dia</div>
       ) : (
         <div className="space-y-2">
           {filtrados.map(ag => {
@@ -392,23 +392,23 @@ export default function Agendamentos() {
               <div
                 key={ag.id}
                 ref={el => { itemRefs.current[ag.id] = el; }}
-                className={`bg-white rounded-xl border p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow ${
-                  destacado ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-100'
+                className={`bg-stone-900 rounded-xl border p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow ${
+                  destacado ? 'border-gold-500/50 ring-2 ring-gold-500/30' : 'border-stone-800'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="text-center w-14">
-                    {ignorarData && <p className="text-[10px] font-medium text-blue-500 mb-0.5">{fmtDataCurta(ag.data)}</p>}
-                    <p className="font-semibold text-slate-800 text-sm">{ag.horaInicio}</p>
-                    <p className="text-xs text-slate-400">{ag.horaFim}</p>
+                    {ignorarData && <p className="text-[10px] font-medium text-gold-400 mb-0.5">{fmtDataCurta(ag.data)}</p>}
+                    <p className="font-semibold text-stone-50 text-sm">{ag.horaInicio}</p>
+                    <p className="text-xs text-stone-500">{ag.horaFim}</p>
                   </div>
-                  <div className="h-10 w-px bg-slate-100" />
+                  <div className="h-10 w-px bg-stone-800" />
                   <div>
-                    <p className="font-medium text-slate-800">{ag.clienteNome}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className="font-medium text-stone-50">{ag.clienteNome}</p>
+                    <p className="text-sm text-stone-400">
                       {ag.servicoNome}{ag.profissionalNome ? ` · ${ag.profissionalNome}` : ''}
                     </p>
-                    {ag.clienteTel && <p className="text-xs text-slate-400 mt-0.5">{ag.clienteTel}</p>}
+                    {ag.clienteTel && <p className="text-xs text-stone-500 mt-0.5">{ag.clienteTel}</p>}
                     {ag.status === 'CANCELADO' && ag.motivoCancelamento && (
                       <p className="text-xs text-red-400 mt-0.5">Motivo: {ag.motivoCancelamento}</p>
                     )}
@@ -431,7 +431,7 @@ export default function Agendamentos() {
                   {/* aceitar PENDENTE → CONFIRMADO */}
                   {ag.status === 'PENDENTE' && (
                     <button onClick={() => handleStatus(ag.id, 'CONFIRMADO')} title="Aceitar agendamento"
-                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                      className="p-1.5 text-gold-400 hover:bg-gold-500/10 rounded-lg transition-colors">
                       <CheckCircle2 size={18} />
                     </button>
                   )}
@@ -439,7 +439,7 @@ export default function Agendamentos() {
                   {/* concluir serviço (só após o profissional confirmar o agendamento) */}
                   {ag.status === 'CONFIRMADO' && (
                     <button onClick={() => handleConcluirClick(ag)} title="Concluir serviço"
-                      className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors">
+                      className="p-1.5 text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors">
                       <CheckCheck size={18} />
                     </button>
                   )}
@@ -449,7 +449,7 @@ export default function Agendamentos() {
                     <button
                       onClick={() => { setModalPagamento(ag); setConcluirComPagamento(false); setPixData(null); setMetodo('DINHEIRO'); }}
                       title="Registrar pagamento"
-                      className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                      className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
                     >
                       <CreditCard size={18} />
                     </button>
@@ -458,7 +458,7 @@ export default function Agendamentos() {
                   {/* cancelar */}
                   {ativo && (
                     <button onClick={() => abrirModalCancelar(ag)} title="Cancelar"
-                      className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                      className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                       <XCircle size={18} />
                     </button>
                   )}
@@ -474,11 +474,11 @@ export default function Agendamentos() {
         <form onSubmit={handleSalvar} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Nome do cliente *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Nome do cliente *</label>
               <input className="input" required value={form.clienteNome} onChange={e => setForm({ ...form, clienteNome: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Telefone *</label>
               <input
                 className="input"
                 required
@@ -490,32 +490,32 @@ export default function Agendamentos() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-stone-200 mb-1">
                 Serviços *
                 {form.servicoIds.length > 0 && (
-                  <span className="ml-1 font-normal text-blue-600">({duracaoTotal} min)</span>
+                  <span className="ml-1 font-normal text-gold-400">({duracaoTotal} min)</span>
                 )}
               </label>
-              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-36 overflow-y-auto">
+              <div className="border border-stone-700 rounded-lg divide-y divide-stone-800 max-h-36 overflow-y-auto">
                 {servicos.map(s => {
                   const selecionado = form.servicoIds.includes(s.id);
                   return (
-                    <label key={s.id} className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-slate-50">
+                    <label key={s.id} className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-stone-800/60">
                       <input type="checkbox" checked={selecionado} onChange={() => toggleServico(s.id)} className="rounded" />
                       <span className="flex-1">{s.nome}</span>
-                      <span className="text-xs text-slate-400">{s.duracaoMin} min</span>
+                      <span className="text-xs text-stone-500">{s.duracaoMin} min</span>
                     </label>
                   );
                 })}
               </div>
               {!loading && servicos.length === 0 && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-red-400 mt-1">
                   {loadError ? 'Falha ao carregar serviços.' : 'Nenhum serviço cadastrado. Cadastre um em "Serviços" antes de criar um agendamento.'}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Profissional</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Profissional</label>
               <select
                 className="input"
                 value={form.profissionalId}
@@ -528,7 +528,7 @@ export default function Agendamentos() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Data *</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Data *</label>
             <input
               type="date"
               className="input w-40"
@@ -540,10 +540,10 @@ export default function Agendamentos() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-2">
+            <label className="block text-xs font-medium text-stone-200 mb-2">
               Horário disponível *
               {form.horaInicio && (
-                <span className="ml-2 text-blue-600 font-semibold">{form.horaInicio} – {form.horaFim}</span>
+                <span className="ml-2 text-gold-400 font-semibold">{form.horaInicio} – {form.horaFim}</span>
               )}
             </label>
             <SlotPicker
@@ -556,11 +556,11 @@ export default function Agendamentos() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Observação</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Observação</label>
             <textarea className="input" rows={2} value={form.observacao} onChange={e => setForm({ ...form, observacao: e.target.value })} />
           </div>
 
-          {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{error}</p>}
+          {error && <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setModalNovo(false)} className="btn-ghost">Cancelar</button>
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Salvando...' : 'Criar agendamento'}</button>
@@ -572,18 +572,18 @@ export default function Agendamentos() {
       <Modal open={!!modalPagamento} onClose={fecharPagamento} title={concluirComPagamento ? 'Concluir Atendimento' : 'Registrar Pagamento'}>
         {modalPagamento && !pixData && (
           <div className="space-y-4">
-            <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+            <div className="bg-stone-800/60 rounded-lg p-3 text-sm space-y-1">
               <p><span className="font-medium">Cliente:</span> {modalPagamento.clienteNome}</p>
               <p><span className="font-medium">Serviço:</span> {modalPagamento.servicoNome}</p>
               <p><span className="font-medium">Horário:</span> {modalPagamento.horaInicio} – {modalPagamento.horaFim}</p>
             </div>
             {concluirComPagamento && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-stone-300">
                 O pagamento deste serviço já foi efetuado? Confirme para concluir o atendimento, ou informe que o pagamento ainda está pendente para manter o agendamento como está.
               </p>
             )}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Método de pagamento</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Método de pagamento</label>
               <select className="input" value={metodo} onChange={e => setMetodo(e.target.value)}>
                 <option value="DINHEIRO">Dinheiro</option>
                 <option value="PIX">PIX (via Mercado Pago)</option>
@@ -595,7 +595,7 @@ export default function Agendamentos() {
               <button onClick={fecharPagamento} className="btn-ghost">
                 {concluirComPagamento ? 'Pagamento ainda pendente' : 'Cancelar'}
               </button>
-              <button onClick={handlePagamento} disabled={saving} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+              <button onClick={handlePagamento} disabled={saving} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
                 {saving ? 'Processando...' : (concluirComPagamento ? 'Confirmar pagamento e concluir' : 'Confirmar pagamento')}
               </button>
             </div>
@@ -603,22 +603,22 @@ export default function Agendamentos() {
         )}
         {pixData && (
           <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-sm text-emerald-400">
               PIX gerado! O agendamento será concluído automaticamente quando o pagamento for confirmado.
             </div>
             {pixData.pixQrCodeBase64 && (
               <img
                 src={`data:image/png;base64,${pixData.pixQrCodeBase64}`}
                 alt="QR Code PIX"
-                className="mx-auto w-40 h-40 border border-slate-200 rounded-lg"
+                className="mx-auto w-40 h-40 border border-stone-700 rounded-lg"
               />
             )}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Copia e Cola</label>
               <textarea readOnly className="input font-mono text-xs" rows={4} value={pixData.pixCopiaECola} />
             </div>
             {pixData.pixExpiraEm && (
-              <p className="text-xs text-slate-400">Expira em: {new Date(pixData.pixExpiraEm).toLocaleString('pt-BR')}</p>
+              <p className="text-xs text-stone-500">Expira em: {new Date(pixData.pixExpiraEm).toLocaleString('pt-BR')}</p>
             )}
             <div className="flex justify-end">
               <button onClick={fecharPagamento} className="btn-primary">Fechar</button>
@@ -631,13 +631,13 @@ export default function Agendamentos() {
       <Modal open={!!modalCancelar} onClose={fecharModalCancelar} title="Cancelar Agendamento">
         {modalCancelar && (
           <div className="space-y-4">
-            <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+            <div className="bg-stone-800/60 rounded-lg p-3 text-sm space-y-1">
               <p><span className="font-medium">Cliente:</span> {modalCancelar.clienteNome}</p>
               <p><span className="font-medium">Serviço:</span> {modalCancelar.servicoNome}</p>
               <p><span className="font-medium">Horário:</span> {modalCancelar.horaInicio} – {modalCancelar.horaFim}</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Motivo do cancelamento *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Motivo do cancelamento *</label>
               <textarea
                 className="input"
                 rows={3}

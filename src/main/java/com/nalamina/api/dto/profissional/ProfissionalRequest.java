@@ -11,6 +11,5 @@ public class ProfissionalRequest {
     @Size(max = 100)
     private String nome;
 
-    @Size(max = 255)
     private String fotoUrl;
 }

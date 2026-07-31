@@ -11,6 +11,7 @@ import java.util.UUID;
 public class NotificacaoAdminResponse {
     private UUID id;
     private UUID agendamentoId;
+    private UUID filaEsperaId;
     private String titulo;
     private String mensagem;
     private Boolean lida;

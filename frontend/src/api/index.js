@@ -33,9 +33,12 @@ export const desativarProfissional = (id) => api.delete(`/profissionais/${id}`).
 
 // Pagamentos
 export const listarPagamentos = (params) => api.get('/pagamentos', { params }).then(r => r.data);
-export const relatorioPagamentos = (params) => api.get('/pagamentos/relatorio', { params }).then(r => r.data);
 export const registrarPagamento = (agendamentoId, data) => api.post(`/agendamentos/${agendamentoId}/pagamentos`, data).then(r => r.data);
 export const buscarPagamento = (agendamentoId) => api.get(`/agendamentos/${agendamentoId}/pagamentos`).then(r => r.data);
+
+// Financeiro (visão unificada: agendamentos + vendas PDV + mensalidades)
+export const listarFinanceiro = (params) => api.get('/financeiro', { params }).then(r => r.data);
+export const relatorioFinanceiro = (params) => api.get('/financeiro/relatorio', { params }).then(r => r.data);
 
 // Estoque (produtos)
 export const listarProdutos = (q) => api.get('/produtos', { params: q ? { q } : {} }).then(r => r.data);
@@ -74,3 +77,10 @@ export const alternarAtivoPlano = (id, ativo) => api.patch(`/planos/${id}/ativo`
 // Assinaturas de clientes (admin)
 export const listarAssinaturas = () => api.get('/assinaturas').then(r => r.data);
 export const renovarAssinatura = (id) => api.post(`/assinaturas/${id}/renovar`).then(r => r.data);
+
+// Fila de espera (admin)
+export const listarFila = () => api.get('/fila').then(r => r.data);
+export const entrarNaFilaAdmin = (data) => api.post('/fila', data).then(r => r.data);
+export const chamarDaFila = (id) => api.post(`/fila/${id}/chamar`).then(r => r.data);
+export const finalizarFila = (id) => api.post(`/fila/${id}/finalizar`).then(r => r.data);
+export const removerDaFila = (id) => api.post(`/fila/${id}/remover`).then(r => r.data);

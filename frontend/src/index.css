@@ -2,14 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-stone-950 text-stone-100 antialiased;
+  }
+}
+
 @layer components {
   .input {
-    @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white;
+    @apply w-full border border-stone-700 rounded-lg px-3 py-2 text-sm text-stone-100 placeholder-stone-500 bg-stone-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500;
   }
   .btn-primary {
-    @apply px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors;
+    @apply px-4 py-2 text-sm font-medium bg-gold-500 text-stone-900 rounded-lg hover:bg-gold-400 disabled:opacity-50 transition-colors;
   }
   .btn-ghost {
-    @apply px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors;
+    @apply px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 rounded-lg transition-colors;
+  }
+  .card {
+    @apply bg-stone-900 rounded-xl border border-stone-800 shadow-sm;
+  }
+  .label-caps {
+    @apply text-[11px] font-mono uppercase tracking-widest text-stone-500;
+  }
+}
+
+@layer utilities {
+  @keyframes tela-entra-direita {
+    from { opacity: 0; transform: translateX(28px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes tela-entra-esquerda {
+    from { opacity: 0; transform: translateX(-28px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .tela-entra-direita {
+    animation: tela-entra-direita 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tela-entra-esquerda {
+    animation: tela-entra-esquerda 420ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 }

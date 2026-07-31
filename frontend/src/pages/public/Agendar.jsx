@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck } from 'lucide-react';
+import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck, Ticket } from 'lucide-react';
 import * as api from '../../api/public';
+import Modal from '../../components/Modal';
 
 const hoje = new Date().toISOString().split('T')[0];
 
@@ -31,7 +32,13 @@ export default function Agendar() {
   const [erroAssinatura, setErroAssinatura] = useState('');
   const [assinaturaCriada, setAssinaturaCriada] = useState(null);
 
+  const [filaAtiva, setFilaAtiva] = useState(null);
+  const [filaConcluida, setFilaConcluida] = useState(false);
+  const [entrandoFila, setEntrandoFila] = useState(false);
+  const [erroFila, setErroFila] = useState('');
+
   const [step, setStep] = useState(1);
+  const [direcao, setDirecao] = useState('frente'); // 'frente' | 'volta' — controla o lado de onde a tela entra
 
   const [servicos, setServicos] = useState([]);
   const [servico, setServico] = useState(null);
@@ -82,6 +89,7 @@ export default function Agendar() {
         setSaudacao(`Bem-vindo de volta, ${cliente.nome}! 👋`);
         await continuarAposIdentificacao(cliente.telefoneNormalizado);
       } else {
+        setDirecao('frente');
         setIdentStep('nome');
       }
     } catch (err) {
@@ -100,33 +108,35 @@ export default function Agendar() {
   }
 
   async function continuarAposIdentificacao(telefoneNormalizado) {
+    setDirecao('frente');
     try {
-      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
-      setStatusAssinante(status);
-
-      if (status.assinante) {
-        setModo('decisao');
+      const ticket = await api.statusFila(slug, telefoneNormalizado);
+      if (ticket) {
+        setFilaAtiva(ticket);
+        setModo('fila');
         return;
       }
 
+      const status = await api.assinaturaStatus(slug, telefoneNormalizado);
+      setStatusAssinante(status);
+
       const planos = await api.listarPlanos(slug);
       setPlanosAtivos(planos);
-      if (planos.length > 0) {
-        setModo('decisao');
-      } else {
-        iniciarAgendamento();
-      }
+
+      setModo('decisao');
     } catch (err) {
       setErroIdentificacao(err.response?.data?.message || 'Não foi possível continuar. Tente novamente.');
     }
   }
 
   function iniciarAgendamento() {
+    setDirecao('frente');
     setModo('agendamento');
     setStep(1);
   }
 
   function voltarParaIdentificacao() {
+    setDirecao('volta');
     setModo('identificacao');
     setIdentStep('telefone');
     setSaudacao('');
@@ -134,10 +144,58 @@ export default function Agendar() {
   }
 
   function iniciarAssinatura() {
+    setDirecao('frente');
     setPlanoEscolhido(null);
     setErroAssinatura('');
     setModo('assinatura');
   }
+
+  function iniciarFila() {
+    setDirecao('frente');
+    setFilaAtiva(null);
+    setFilaConcluida(false);
+    setErroFila('');
+    setModo('fila');
+  }
+
+  async function handleEntrarNaFila(s) {
+    setDirecao('frente');
+    setEntrandoFila(true);
+    setErroFila('');
+    try {
+      const ticket = await api.entrarNaFila(slug, { servicoId: s.id, clienteNome, clienteTel });
+      setFilaAtiva(ticket);
+    } catch (err) {
+      setErroFila(err.response?.data?.message || 'Não foi possível entrar na fila. Tente novamente.');
+    } finally { setEntrandoFila(false); }
+  }
+
+  async function handleSairDaFila() {
+    if (!confirm('Sair da fila de espera?')) return;
+    try {
+      await api.sairDaFila(slug, filaAtiva.id, clienteTel);
+    } catch {
+      // mesmo se der erro de rede aqui, tira o cliente da tela de espera — ele pediu pra sair
+    }
+    setDirecao('volta');
+    setFilaAtiva(null);
+    setFilaConcluida(false);
+    setModo('decisao');
+  }
+
+  useEffect(() => {
+    if (modo !== 'fila' || !filaAtiva) return;
+    const intervalo = setInterval(async () => {
+      try {
+        const atualizado = await api.statusFila(slug, clienteTel);
+        if (!atualizado) setFilaConcluida(true);
+        setFilaAtiva(atualizado);
+      } catch {
+        // se a rede falhar num ciclo, só tenta de novo no próximo poll
+      }
+    }, 20000);
+    return () => clearInterval(intervalo);
+  }, [modo, filaAtiva?.id, slug, clienteTel]);
 
   async function handleConfirmarAssinatura(e) {
     e.preventDefault();
@@ -152,24 +210,36 @@ export default function Agendar() {
   }
 
   function escolherServico(s) {
+    setDirecao('frente');
     setServico(s);
     setStep(2);
   }
 
+  const [servicoPreview, setServicoPreview] = useState(null); // { servico, contexto: 'agendamento' | 'fila' }
+
+  function abrirPreviewServico(s, contexto) {
+    setServicoPreview({ servico: s, contexto });
+  }
+
+  function confirmarServicoPreview() {
+    if (!servicoPreview) return;
+    const { servico: s, contexto } = servicoPreview;
+    setServicoPreview(null);
+    if (contexto === 'fila') handleEntrarNaFila(s);
+    else escolherServico(s);
+  }
+
   function escolherProfissional(p) {
+    setDirecao('frente');
     setProfissional(p);
     setStep(3);
   }
 
   function voltar() {
+    setDirecao('volta');
     setErro('');
     if (step === 1) {
-      const semOfertaDeAssinatura = !statusAssinante?.assinante && planosAtivos.length === 0;
-      if (semOfertaDeAssinatura) {
-        voltarParaIdentificacao();
-      } else {
-        setModo('decisao');
-      }
+      setModo('decisao');
       return;
     }
     setStep(s => Math.max(1, s - 1));
@@ -200,16 +270,22 @@ export default function Agendar() {
   const fmtHora = (h) => h ? h.slice(0, 5) : '';
   const fmtDataExibicao = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '';
 
+  const telaAtual = modo === 'identificacao' ? `ident-${identStep}`
+    : modo === 'agendamento' ? `agendamento-${step}`
+    : modo === 'fila' ? `fila-${filaAtiva ? 'ticket' : filaConcluida ? 'concluida' : 'servico'}`
+    : modo === 'assinatura' ? `assinatura-${assinaturaCriada ? 'pix' : planoEscolhido ? 'confirmar' : 'lista'}`
+    : modo;
+
   if (carregandoBarbearia) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-400">Carregando...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-stone-500">Carregando...</div>;
   }
 
   if (barbeariaNaoEncontrada) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 mb-2">Barbearia não encontrada</h1>
-          <p className="text-slate-500 text-sm">Verifique se o link está correto.</p>
+          <h1 className="text-xl font-serif font-semibold text-stone-50 mb-2">Barbearia não encontrada</h1>
+          <p className="text-stone-400 text-sm">Verifique se o link está correto.</p>
         </div>
       </div>
     );
@@ -217,17 +293,17 @@ export default function Agendar() {
 
   if (confirmado) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="max-w-sm w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-          <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
-          <h1 className="text-lg font-bold text-slate-800 mb-1">Agendamento confirmado!</h1>
-          <p className="text-slate-500 text-sm mb-6">Anote os detalhes abaixo.</p>
-          <div className="text-left bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
-            <p><span className="text-slate-400">Barbearia:</span> <span className="font-medium text-slate-800">{barbearia.nome}</span></p>
-            <p><span className="text-slate-400">Serviço:</span> <span className="font-medium text-slate-800">{servico.nome}</span></p>
-            <p><span className="text-slate-400">Data:</span> <span className="font-medium text-slate-800 capitalize">{fmtDataExibicao(data)}</span></p>
-            <p><span className="text-slate-400">Horário:</span> <span className="font-medium text-slate-800">{fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</span></p>
-            {profissional && <p><span className="text-slate-400">Profissional:</span> <span className="font-medium text-slate-800">{profissional.nome}</span></p>}
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center p-6">
+        <div className="max-w-sm w-full bg-stone-900 rounded-2xl shadow-sm border border-stone-800 p-8 text-center">
+          <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-4" />
+          <h1 className="text-lg font-serif font-semibold text-stone-50 mb-1">Agendamento confirmado!</h1>
+          <p className="text-stone-400 text-sm mb-6">Anote os detalhes abaixo.</p>
+          <div className="text-left bg-stone-800/60 rounded-xl p-4 space-y-1.5 text-sm">
+            <p><span className="text-stone-500">Barbearia:</span> <span className="font-medium text-stone-50">{barbearia.nome}</span></p>
+            <p><span className="text-stone-500">Serviço:</span> <span className="font-medium text-stone-50">{servico.nome}</span></p>
+            <p><span className="text-stone-500">Data:</span> <span className="font-medium text-stone-50 capitalize">{fmtDataExibicao(data)}</span></p>
+            <p><span className="text-stone-500">Horário:</span> <span className="font-medium text-stone-50">{fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</span></p>
+            {profissional && <p><span className="text-stone-500">Profissional:</span> <span className="font-medium text-stone-50">{profissional.nome}</span></p>}
           </div>
         </div>
       </div>
@@ -235,30 +311,30 @@ export default function Agendar() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-100 px-6 py-5">
-        <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+    <div className="min-h-screen bg-stone-950 overflow-x-hidden">
+      <header className="bg-stone-900 border-b border-stone-800 px-6 py-5">
+        <h1 className="text-lg font-serif font-semibold text-stone-50 flex items-center gap-2">
           <Scissors size={20} /> {barbearia?.nome}
         </h1>
         {barbearia?.endereco && (
-          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><MapPin size={12} /> {barbearia.endereco}</p>
+          <p className="text-xs text-stone-500 mt-1 flex items-center gap-1"><MapPin size={12} /> {barbearia.endereco}</p>
         )}
         {barbearia?.telefone && (
-          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Phone size={12} /> {barbearia.telefone}</p>
+          <p className="text-xs text-stone-500 mt-0.5 flex items-center gap-1"><Phone size={12} /> {barbearia.telefone}</p>
         )}
       </header>
 
-      <div className="max-w-md mx-auto p-4">
+      <div key={telaAtual} className={`max-w-md mx-auto p-4 ${direcao === 'frente' ? 'tela-entra-direita' : 'tela-entra-esquerda'}`}>
         {modo === 'identificacao' && identStep === 'telefone' && (
           <form onSubmit={handleTelefoneSubmit} className="space-y-4">
-            <h2 className="font-semibold text-slate-800">Olá! 👋</h2>
-            <p className="text-sm text-slate-500">Informe seu telefone para começar.</p>
+            <h2 className="font-semibold text-stone-50">Olá! 👋</h2>
+            <p className="text-sm text-stone-400">Informe seu telefone para começar.</p>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Telefone *</label>
               <input className="input" required autoFocus type="tel" placeholder="(21) 99999-9999"
                 value={telefoneInput} onChange={e => setTelefoneInput(e.target.value)} />
             </div>
-            {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
+            {erroIdentificacao && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erroIdentificacao}</p>}
             <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
               {verificando ? 'Verificando...' : 'Continuar'}
             </button>
@@ -267,16 +343,16 @@ export default function Agendar() {
 
         {modo === 'identificacao' && identStep === 'nome' && (
           <form onSubmit={handleNomeSubmit} className="space-y-4">
-            <button type="button" onClick={() => setIdentStep('telefone')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+            <button type="button" onClick={() => { setDirecao('volta'); setIdentStep('telefone'); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
-            <h2 className="font-semibold text-slate-800">Prazer em te conhecer!</h2>
-            <p className="text-sm text-slate-500">Não te encontramos por aqui ainda — como podemos te chamar?</p>
+            <h2 className="font-semibold text-stone-50">Prazer em te conhecer!</h2>
+            <p className="text-sm text-stone-400">Não te encontramos por aqui ainda — como podemos te chamar?</p>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Nome *</label>
               <input className="input" required autoFocus value={clienteNome} onChange={e => setClienteNome(e.target.value)} />
             </div>
-            {erroIdentificacao && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroIdentificacao}</p>}
+            {erroIdentificacao && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erroIdentificacao}</p>}
             <button type="submit" disabled={verificando} className="btn-primary w-full disabled:opacity-50">
               {verificando ? 'Verificando...' : 'Continuar'}
             </button>
@@ -285,36 +361,41 @@ export default function Agendar() {
 
         {modo === 'decisao' && (
           <div className="space-y-4">
-            <button onClick={voltarParaIdentificacao} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+            <button onClick={voltarParaIdentificacao} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
 
             {saudacao && (
-              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">{saudacao}</p>
+              <p className="text-sm text-stone-300 bg-gold-500/10 border border-gold-500/30 rounded-lg px-4 py-3">{saudacao}</p>
             )}
 
             {statusAssinante?.assinante ? (
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 text-center">
-                <BadgeCheck size={32} className="text-green-500 mx-auto mb-2" />
-                <p className="font-semibold text-slate-800">Você é assinante do plano {statusAssinante.planoNome}</p>
-                <p className="text-sm text-slate-500 mt-1">
+              <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-5 text-center">
+                <BadgeCheck size={32} className="text-emerald-400 mx-auto mb-2" />
+                <p className="font-semibold text-stone-50">Você é assinante do plano {statusAssinante.planoNome}</p>
+                <p className="text-sm text-stone-400 mt-1">
                   {statusAssinante.diasRestantes != null && statusAssinante.diasRestantes >= 0
                     ? `Faltam ${statusAssinante.diasRestantes} dia(s) para renovar.`
                     : 'Sua assinatura está vencida — fale com a barbearia para renovar.'}
                 </p>
               </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-                <p className="font-semibold text-slate-800 mb-1 flex items-center gap-2"><BadgeCheck size={18} /> Que tal assinar um plano?</p>
-                <p className="text-sm text-slate-500">Esta barbearia tem planos de assinatura com benefícios exclusivos.</p>
+            ) : planosAtivos.length > 0 && (
+              <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-5">
+                <p className="font-semibold text-stone-50 mb-1 flex items-center gap-2"><BadgeCheck size={18} /> Que tal assinar um plano?</p>
+                <p className="text-sm text-stone-400">Esta barbearia tem planos de assinatura com benefícios exclusivos.</p>
               </div>
             )}
 
             <button onClick={iniciarAgendamento} className="btn-primary w-full">Agendar um horário</button>
 
-            {!statusAssinante?.assinante && (
+            <button onClick={iniciarFila}
+              className="w-full flex items-center justify-center gap-2 border border-stone-700 text-stone-200 rounded-xl py-2.5 text-sm font-medium hover:bg-stone-800/60 transition-colors">
+              <Ticket size={16} /> Entrar na fila de espera
+            </button>
+
+            {!statusAssinante?.assinante && planosAtivos.length > 0 && (
               <button onClick={iniciarAssinatura}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2">
+                className="w-full text-center text-sm text-gold-400 hover:text-gold-400 py-2">
                 Ver planos de assinatura
               </button>
             )}
@@ -323,37 +404,37 @@ export default function Agendar() {
 
         {modo === 'assinatura' && !assinaturaCriada && (
           <div className="space-y-3">
-            <button onClick={() => { setModo('decisao'); setPlanoEscolhido(null); }} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-1">
+            <button onClick={() => { setDirecao('volta'); setModo('decisao'); setPlanoEscolhido(null); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
 
             {!planoEscolhido ? (
               <>
-                <h2 className="font-semibold text-slate-800 mb-2">Escolha um plano</h2>
+                <h2 className="font-semibold text-stone-50 mb-2">Escolha um plano</h2>
                 {planosAtivos.map(p => (
-                  <button key={p.id} onClick={() => setPlanoEscolhido(p)}
-                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+                  <button key={p.id} onClick={() => { setDirecao('frente'); setPlanoEscolhido(p); }}
+                    className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">{p.nome}</span>
-                      <span className="font-semibold text-slate-800">{fmt(p.precoMensal)}/mês</span>
+                      <span className="font-medium text-stone-50">{p.nome}</span>
+                      <span className="font-semibold text-stone-50">{fmt(p.precoMensal)}/mês</span>
                     </div>
-                    {p.descricao && <p className="text-xs text-slate-500 mt-1.5 whitespace-pre-line">{p.descricao}</p>}
+                    {p.descricao && <p className="text-xs text-stone-400 mt-1.5 whitespace-pre-line">{p.descricao}</p>}
                   </button>
                 ))}
                 {planosAtivos.length === 0 && (
-                  <p className="text-slate-400 text-sm text-center py-8">Nenhum plano de assinatura disponível no momento.</p>
+                  <p className="text-stone-500 text-sm text-center py-8">Nenhum plano de assinatura disponível no momento.</p>
                 )}
               </>
             ) : (
               <form onSubmit={handleConfirmarAssinatura} className="space-y-4">
-                <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+                <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-slate-800">{planoEscolhido.nome}</span>
-                    <span className="font-semibold text-slate-800">{fmt(planoEscolhido.precoMensal)}/mês</span>
+                    <span className="font-semibold text-stone-50">{planoEscolhido.nome}</span>
+                    <span className="font-semibold text-stone-50">{fmt(planoEscolhido.precoMensal)}/mês</span>
                   </div>
-                  {planoEscolhido.descricao && <p className="text-xs text-slate-500 whitespace-pre-line">{planoEscolhido.descricao}</p>}
+                  {planoEscolhido.descricao && <p className="text-xs text-stone-400 whitespace-pre-line">{planoEscolhido.descricao}</p>}
                 </div>
-                {erroAssinatura && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erroAssinatura}</p>}
+                {erroAssinatura && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erroAssinatura}</p>}
                 <button type="submit" disabled={assinando} className="btn-primary w-full disabled:opacity-50">
                   {assinando ? 'Gerando pagamento...' : 'Assinar e pagar com PIX'}
                 </button>
@@ -363,11 +444,11 @@ export default function Agendar() {
         )}
 
         {modo === 'assinatura' && assinaturaCriada && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="bg-stone-900 rounded-2xl shadow-sm border border-stone-800 p-6">
             <div className="text-center mb-4">
-              <BadgeCheck size={40} className="text-blue-600 mx-auto mb-2" />
-              <h1 className="text-lg font-bold text-slate-800">PIX gerado!</h1>
-              <p className="text-slate-500 text-sm mt-1">
+              <BadgeCheck size={40} className="text-gold-400 mx-auto mb-2" />
+              <h1 className="text-lg font-serif font-semibold text-stone-50">PIX gerado!</h1>
+              <p className="text-stone-400 text-sm mt-1">
                 Sua assinatura do plano <span className="font-medium">{assinaturaCriada.planoNome}</span> será ativada
                 automaticamente assim que o pagamento for confirmado.
               </p>
@@ -376,11 +457,75 @@ export default function Agendar() {
               <img
                 src={`data:image/png;base64,${assinaturaCriada.pixQrCodeBase64}`}
                 alt="QR Code PIX"
-                className="mx-auto w-48 h-48 border border-slate-200 rounded-lg mb-4"
+                className="mx-auto w-48 h-48 border border-stone-700 rounded-lg mb-4"
               />
             )}
-            <label className="block text-xs font-medium text-slate-700 mb-1">Copia e Cola</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Copia e Cola</label>
             <textarea readOnly className="input font-mono text-xs" rows={4} value={assinaturaCriada.pixCopiaECola} />
+          </div>
+        )}
+
+        {modo === 'fila' && !filaAtiva && !filaConcluida && (
+          <div className="space-y-3">
+            <button onClick={() => { setDirecao('volta'); setModo('decisao'); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+              <ChevronLeft size={16} /> Voltar
+            </button>
+            <h2 className="font-semibold text-stone-50 mb-2 flex items-center gap-2"><Ticket size={16} /> Escolha o serviço</h2>
+            {servicos.map(s => (
+              <button key={s.id} onClick={() => abrirPreviewServico(s, 'fila')} disabled={entrandoFila}
+                className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors disabled:opacity-50">
+                <div className="flex items-center gap-3">
+                  {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-stone-50">{s.nome}</span>
+                      <span className="font-semibold text-stone-50">{fmt(s.preco)}</span>
+                    </div>
+                    {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
+                  </div>
+                </div>
+              </button>
+            ))}
+            {erroFila && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erroFila}</p>}
+            {servicos.length === 0 && <p className="text-stone-500 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+          </div>
+        )}
+
+        {modo === 'fila' && filaAtiva && (
+          <div className="bg-stone-900 rounded-2xl shadow-sm border border-stone-800 p-8 text-center">
+            <div className="inline-flex items-center gap-1.5 bg-stone-800/60 text-stone-400 text-xs font-medium px-3 py-1 rounded-full mb-1">
+              <Ticket size={13} /> Senha #{filaAtiva.numeroTicket}
+            </div>
+
+            {filaAtiva.status === 'EM_ATENDIMENTO' ? (
+              <div className="my-6">
+                <p className="text-3xl font-extrabold text-emerald-400 leading-tight">É a sua vez!</p>
+                <p className="text-stone-400 text-sm mt-2">Dirija-se ao balcão 🎉</p>
+              </div>
+            ) : (
+              <div className="my-5">
+                <p className="text-7xl font-extrabold text-gold-400 leading-none tabular-nums">
+                  {filaAtiva.pessoasNaFrente}
+                </p>
+                <p className="text-sm font-semibold text-stone-200 mt-3">
+                  {filaAtiva.pessoasNaFrente === 0 ? 'Você é o próximo!' : 'pessoa(s) na sua frente'}
+                </p>
+              </div>
+            )}
+
+            <p className="text-xs text-stone-500">Serviço: {filaAtiva.servicoNome}</p>
+
+            <button onClick={handleSairDaFila} className="mt-6 text-sm text-red-400 hover:text-red-400">
+              Sair da fila
+            </button>
+          </div>
+        )}
+
+        {modo === 'fila' && filaConcluida && !filaAtiva && (
+          <div className="bg-stone-900 rounded-2xl shadow-sm border border-stone-800 p-8 text-center">
+            <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-3" />
+            <p className="font-semibold text-stone-50">Atendimento concluído!</p>
+            <p className="text-sm text-stone-400 mt-1">Obrigado por aguardar.</p>
           </div>
         )}
 
@@ -388,52 +533,57 @@ export default function Agendar() {
           <>
             <div className="flex items-center gap-1.5 mb-5 px-1">
               {[1, 2, 3, 4].map(n => (
-                <div key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                <div key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-gold-500' : 'bg-stone-700'}`} />
               ))}
             </div>
 
-            <button onClick={voltar} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-3">
+            <button onClick={voltar} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-3">
               <ChevronLeft size={16} /> Voltar
             </button>
 
             {step === 1 && saudacao && (
-              <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-3">{saudacao}</p>
+              <p className="text-sm text-stone-300 bg-gold-500/10 border border-gold-500/30 rounded-lg px-4 py-3 mb-3">{saudacao}</p>
             )}
 
             {step === 1 && (
               <div className="space-y-3">
-                <h2 className="font-semibold text-slate-800 mb-2">Escolha o serviço</h2>
+                <h2 className="font-semibold text-stone-50 mb-2">Escolha o serviço</h2>
                 {servicos.map(s => (
-                  <button key={s.id} onClick={() => escolherServico(s)}
-                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">{s.nome}</span>
-                      <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
+                  <button key={s.id} onClick={() => abrirPreviewServico(s, 'agendamento')}
+                    className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-stone-50">{s.nome}</span>
+                          <span className="font-semibold text-stone-50">{fmt(s.precoAgendamento ?? s.preco)}</span>
+                        </div>
+                        {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
+                        <p className="text-xs text-stone-500 mt-1">{s.duracaoMin} min</p>
+                      </div>
                     </div>
-                    {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
-                    <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
                   </button>
                 ))}
-                {servicos.length === 0 && <p className="text-slate-400 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
+                {servicos.length === 0 && <p className="text-stone-500 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-3">
-                <h2 className="font-semibold text-slate-800 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
+                <h2 className="font-semibold text-stone-50 mb-2 flex items-center gap-2"><User size={16} /> Escolha o profissional</h2>
                 <button onClick={() => escolherProfissional(null)}
-                  className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors font-medium text-slate-700">
+                  className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors font-medium text-stone-200">
                   Sem preferência
                 </button>
                 {profissionais.map(p => (
                   <button key={p.id} onClick={() => escolherProfissional(p)}
-                    className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors flex items-center gap-3">
+                    className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors flex items-center gap-3">
                     {p.fotoUrl ? (
                       <img src={p.fotoUrl} alt={p.nome} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User size={18} /></div>
+                      <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-stone-500"><User size={18} /></div>
                     )}
-                    <span className="font-medium text-slate-800">{p.nome}</span>
+                    <span className="font-medium text-stone-50">{p.nome}</span>
                   </button>
                 ))}
               </div>
@@ -441,14 +591,14 @@ export default function Agendar() {
 
             {step === 3 && (
               <div className="space-y-4">
-                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
+                <h2 className="font-semibold text-stone-50 flex items-center gap-2"><Calendar size={16} /> Escolha data e horário</h2>
                 <input type="date" min={hoje} value={data} onChange={e => setData(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border border-stone-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500" />
 
                 {carregandoSlots ? (
-                  <p className="text-slate-400 text-sm text-center py-6">Buscando horários...</p>
+                  <p className="text-stone-500 text-sm text-center py-6">Buscando horários...</p>
                 ) : slots.length === 0 ? (
-                  <p className="text-slate-400 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
+                  <p className="text-stone-500 text-sm text-center py-6">Nenhum horário disponível nesta data.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {slots.map(s => (
@@ -456,8 +606,8 @@ export default function Agendar() {
                         onClick={() => setSlot(s)}
                         className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                           slot?.horaInicio === s.horaInicio
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                            ? 'bg-gold-500 text-stone-900 border-gold-500'
+                            : 'bg-stone-900 text-stone-200 border-stone-700 hover:border-gold-500/40'
                         }`}>
                         {fmtHora(s.horaInicio)}
                       </button>
@@ -465,7 +615,7 @@ export default function Agendar() {
                   </div>
                 )}
 
-                <button disabled={!slot} onClick={() => setStep(4)}
+                <button disabled={!slot} onClick={() => { setDirecao('frente'); setStep(4); }}
                   className="btn-primary w-full disabled:opacity-50">
                   Continuar
                 </button>
@@ -474,23 +624,23 @@ export default function Agendar() {
 
             {step === 4 && (
               <form onSubmit={confirmar} className="space-y-4">
-                <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Clock size={16} /> Confirme seu agendamento</h2>
+                <h2 className="font-semibold text-stone-50 flex items-center gap-2"><Clock size={16} /> Confirme seu agendamento</h2>
 
-                <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-sm space-y-1">
-                  <p><span className="text-slate-400">Nome:</span> {clienteNome}</p>
-                  <p><span className="text-slate-400">Telefone:</span> {clienteTel}</p>
-                  <p><span className="text-slate-400">Serviço:</span> {servico.nome}</p>
-                  <p><span className="text-slate-400">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
-                  <p><span className="text-slate-400">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
-                  {profissional && <p><span className="text-slate-400">Profissional:</span> {profissional.nome}</p>}
+                <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 text-sm space-y-1">
+                  <p><span className="text-stone-500">Nome:</span> {clienteNome}</p>
+                  <p><span className="text-stone-500">Telefone:</span> {clienteTel}</p>
+                  <p><span className="text-stone-500">Serviço:</span> {servico.nome}</p>
+                  <p><span className="text-stone-500">Data:</span> <span className="capitalize">{fmtDataExibicao(data)}</span></p>
+                  <p><span className="text-stone-500">Horário:</span> {fmtHora(slot.horaInicio)} – {fmtHora(slot.horaFim)}</p>
+                  {profissional && <p><span className="text-stone-500">Profissional:</span> {profissional.nome}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Observação (opcional)</label>
+                  <label className="block text-xs font-medium text-stone-200 mb-1">Observação (opcional)</label>
                   <textarea className="input" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} />
                 </div>
 
-                {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{erro}</p>}
+                {erro && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erro}</p>}
 
                 <button type="submit" disabled={enviando} className="btn-primary w-full disabled:opacity-50">
                   {enviando ? 'Confirmando...' : 'Confirmar agendamento'}
@@ -500,6 +650,36 @@ export default function Agendar() {
           </>
         )}
       </div>
+
+      <Modal open={!!servicoPreview} onClose={() => setServicoPreview(null)} title={servicoPreview?.servico?.nome}>
+        {servicoPreview && (
+          <div className="space-y-4">
+            {servicoPreview.servico.fotoUrl ? (
+              <img src={servicoPreview.servico.fotoUrl} alt={servicoPreview.servico.nome} className="w-full h-48 object-cover rounded-xl" />
+            ) : (
+              <div className="w-full h-48 rounded-xl bg-stone-800 flex items-center justify-center">
+                <Scissors size={32} className="text-stone-600" />
+              </div>
+            )}
+            {servicoPreview.servico.descricao && (
+              <p className="text-sm text-stone-300">{servicoPreview.servico.descricao}</p>
+            )}
+            <div className="flex items-center justify-between text-sm">
+              {servicoPreview.contexto === 'agendamento' && (
+                <span className="text-stone-400">{servicoPreview.servico.duracaoMin} min</span>
+              )}
+              <span className="font-semibold text-stone-50 text-lg ml-auto">
+                {fmt(servicoPreview.contexto === 'agendamento'
+                  ? (servicoPreview.servico.precoAgendamento ?? servicoPreview.servico.preco)
+                  : servicoPreview.servico.preco)}
+              </span>
+            </div>
+            <button onClick={confirmarServicoPreview} className="btn-primary w-full py-2.5">
+              Confirmar serviço
+            </button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

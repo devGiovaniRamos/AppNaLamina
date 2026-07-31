@@ -182,7 +182,7 @@ export default function Configuracoes() {
     finally { setAplicando(false); }
   }
 
-  if (loading) return <div className="p-6 text-center text-slate-400 py-16">Carregando...</div>;
+  if (loading) return <div className="p-6 text-center text-stone-500 py-16">Carregando...</div>;
 
   const horarios = barbearia?.horarios || [];
   const linkPublico = barbearia?.slug ? `${window.location.origin}/agendar/${barbearia.slug}` : '';
@@ -200,24 +200,24 @@ export default function Configuracoes() {
 
   return (
     <div className="p-6 max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Configurações</h1>
+      <h1 className="text-2xl font-serif font-semibold text-stone-50 mb-6">Configurações</h1>
 
-      {sucesso && <p className="text-green-600 text-sm bg-green-50 p-3 rounded-lg mb-4">{sucesso}</p>}
-      {erro && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg mb-4">{erro}</p>}
+      {sucesso && <p className="text-emerald-400 text-sm bg-emerald-500/10 p-3 rounded-lg mb-4">{sucesso}</p>}
+      {erro && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg mb-4">{erro}</p>}
 
       {/* Recebimento via Mercado Pago */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-slate-800 mb-1">Recebimento via Mercado Pago</h2>
-        <p className="text-xs text-slate-400 mb-4">
+      <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-stone-50 mb-1">Recebimento via Mercado Pago</h2>
+        <p className="text-xs text-stone-500 mb-4">
           Conecte sua própria conta Mercado Pago para receber diretamente os pagamentos PIX dos agendamentos.
         </p>
         {barbearia?.mercadoPagoConectado ? (
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
+            <span className="flex items-center gap-1.5 text-sm text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg">
               <Check size={15} /> Conta conectada
             </span>
             <button onClick={handleDesconectarMercadoPago} disabled={desconectandoMP}
-              className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50">
+              className="text-sm text-red-400 hover:text-red-400 disabled:opacity-50">
               {desconectandoMP ? 'Desconectando...' : 'Desconectar'}
             </button>
           </div>
@@ -229,42 +229,42 @@ export default function Configuracoes() {
       </section>
 
       {/* Planos de assinatura */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
+      <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-1">
-          <h2 className="font-semibold text-slate-800">Planos de assinatura</h2>
+          <h2 className="font-semibold text-stone-50">Planos de assinatura</h2>
           <button onClick={abrirCriarPlano} className="flex items-center gap-1.5 text-sm btn-primary">
             <Plus size={15} /> Novo plano
           </button>
         </div>
-        <p className="text-xs text-slate-400 mb-4">
+        <p className="text-xs text-stone-500 mb-4">
           Clientes veem os planos ativos na página pública de assinatura e podem assinar pagando via PIX.
         </p>
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-stone-800">
           {planos.map(p => (
             <div key={p.id} className="py-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-slate-800">{p.nome}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${p.ativo ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                  <p className="font-medium text-stone-50">{p.nome}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${p.ativo ? 'bg-emerald-500/10 text-emerald-400' : 'bg-stone-800 text-stone-400'}`}>
                     {p.ativo ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
-                <p className="text-sm text-slate-600 mt-0.5">R$ {Number(p.precoMensal).toFixed(2)}/mês</p>
-                {p.descricao && <p className="text-xs text-slate-400 mt-1 whitespace-pre-line">{p.descricao}</p>}
+                <p className="text-sm text-stone-300 mt-0.5">R$ {Number(p.precoMensal).toFixed(2)}/mês</p>
+                {p.descricao && <p className="text-xs text-stone-500 mt-1 whitespace-pre-line">{p.descricao}</p>}
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => abrirEditarPlano(p)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg">
+                <button onClick={() => abrirEditarPlano(p)} className="p-1.5 text-stone-500 hover:text-gold-400 hover:bg-gold-500/10 rounded-lg">
                   <Pencil size={15} />
                 </button>
                 <button onClick={() => handleAlternarAtivoPlano(p)}
-                  className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
+                  className="px-2.5 py-1 text-xs bg-stone-800 text-stone-300 rounded-lg hover:bg-stone-700">
                   {p.ativo ? 'Desativar' : 'Ativar'}
                 </button>
               </div>
             </div>
           ))}
           {planos.length === 0 && (
-            <p className="text-center py-8 text-slate-400 text-sm">Nenhum plano cadastrado ainda</p>
+            <p className="text-center py-8 text-stone-500 text-sm">Nenhum plano cadastrado ainda</p>
           )}
         </div>
       </section>
@@ -272,20 +272,20 @@ export default function Configuracoes() {
       <Modal open={modalPlano} onClose={() => setModalPlano(false)} title={editandoPlano ? 'Editar Plano' : 'Novo Plano'}>
         <form onSubmit={handleSalvarPlano} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Nome *</label>
             <input className="input" required value={formPlano.nome} onChange={e => setFormPlano({ ...formPlano, nome: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Preço mensal (R$) *</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Preço mensal (R$) *</label>
             <input type="number" className="input" required min={0.01} step={0.01}
               value={formPlano.precoMensal} onChange={e => setFormPlano({ ...formPlano, precoMensal: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Benefícios *</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Benefícios *</label>
             <textarea className="input" required rows={4} placeholder="Ex: 2 cortes por mês, 10% de desconto em produtos..."
               value={formPlano.descricao} onChange={e => setFormPlano({ ...formPlano, descricao: e.target.value })} />
           </div>
-          {erroPlano && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{erroPlano}</p>}
+          {erroPlano && <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg">{erroPlano}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setModalPlano(false)} className="btn-ghost">Cancelar</button>
             <button type="submit" disabled={salvandoPlano} className="btn-primary">{salvandoPlano ? 'Salvando...' : 'Salvar'}</button>
@@ -295,17 +295,17 @@ export default function Configuracoes() {
 
       {/* Link público de agendamento */}
       {linkPublico && (
-        <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
-          <h2 className="font-semibold text-slate-800 mb-1">Link público de agendamento</h2>
-          <p className="text-xs text-slate-400 mb-4">
+        <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6 mb-6">
+          <h2 className="font-semibold text-stone-50 mb-1">Link público de agendamento</h2>
+          <p className="text-xs text-stone-500 mb-4">
             Compartilhe esse link com seus clientes para eles agendarem sem precisar criar conta.
           </p>
           <div className="flex items-center gap-2">
-            <input readOnly className="input flex-1 text-slate-600" value={linkPublico}
+            <input readOnly className="input flex-1 text-stone-300" value={linkPublico}
               onClick={e => e.target.select()} />
             <button onClick={handleCopiarLink}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors shrink-0">
-              {linkCopiado ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-stone-800 text-stone-200 rounded-lg hover:bg-stone-700 transition-colors shrink-0">
+              {linkCopiado ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
               {linkCopiado ? 'Copiado!' : 'Copiar link'}
             </button>
           </div>
@@ -313,36 +313,36 @@ export default function Configuracoes() {
       )}
 
       {/* Perfil */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-slate-800 mb-4">Perfil da Barbearia</h2>
+      <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-stone-50 mb-4">Perfil da Barbearia</h2>
         <form onSubmit={handleSalvarPerfil} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Nome *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Nome *</label>
               <input className="input" required value={perfil.nome} onChange={e => setPerfil({ ...perfil, nome: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Email *</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Email *</label>
               <input type="email" className="input" required value={perfil.email} onChange={e => setPerfil({ ...perfil, email: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Telefone</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">Telefone</label>
               <input className="input" value={perfil.telefone} onChange={e => setPerfil({ ...perfil, telefone: e.target.value })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">CNPJ</label>
+              <label className="block text-xs font-medium text-stone-200 mb-1">CNPJ</label>
               <input className="input" value={perfil.cnpj} onChange={e => setPerfil({ ...perfil, cnpj: e.target.value })} />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Endereço</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Endereço</label>
             <input className="input" value={perfil.endereco} onChange={e => setPerfil({ ...perfil, endereco: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Descrição</label>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Descrição</label>
             <textarea className="input" rows={3} value={perfil.descricao} onChange={e => setPerfil({ ...perfil, descricao: e.target.value })} />
           </div>
-          {erro && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{erro}</p>}
+          {erro && <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg">{erro}</p>}
           <div className="flex justify-end">
             <button type="submit" disabled={salvandoPerfil} className="btn-primary">
               {salvandoPerfil ? 'Salvando...' : 'Salvar perfil'}
@@ -352,9 +352,9 @@ export default function Configuracoes() {
       </section>
 
       {/* Horários por dia */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-slate-800 mb-1">Horário de Funcionamento</h2>
-        <p className="text-xs text-slate-400 mb-4">Configure cada dia individualmente e clique em Salvar.</p>
+      <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-stone-50 mb-1">Horário de Funcionamento</h2>
+        <p className="text-xs text-stone-500 mb-4">Configure cada dia individualmente e clique em Salvar.</p>
         <div className="space-y-1">
           {[0, 1, 2, 3, 4, 5, 6].map(dia => {
             const h = horarios.find(x => x.diaSemana === dia) || {
@@ -375,30 +375,30 @@ export default function Configuracoes() {
       </section>
 
       {/* Template — clonar para dias abertos */}
-      <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-        <h2 className="font-semibold text-slate-800 mb-1">Replicar horário para dias abertos</h2>
-        <p className="text-xs text-slate-400 mb-4">
+      <section className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-6">
+        <h2 className="font-semibold text-stone-50 mb-1">Replicar horário para dias abertos</h2>
+        <p className="text-xs text-stone-500 mb-4">
           Defina um horário aqui e aplique de uma vez a todos os dias que estão salvos como abertos.
         </p>
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-xs font-medium text-slate-600 w-16">1º turno</span>
+          <span className="text-xs font-medium text-stone-300 w-16">1º turno</span>
           <input type="time" value={template.horaInicio1} onChange={e => setTemplate({ ...template, horaInicio1: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <span className="text-slate-400 text-sm">–</span>
+            className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
+          <span className="text-stone-500 text-sm">–</span>
           <input type="time" value={template.horaFim1} onChange={e => setTemplate({ ...template, horaFim1: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-xs font-medium text-slate-600 w-16">2º turno</span>
+          <span className="text-xs font-medium text-stone-300 w-16">2º turno</span>
           <input type="time" value={template.horaInicio2} onChange={e => setTemplate({ ...template, horaInicio2: e.target.value })}
             placeholder="opcional"
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-          <span className="text-slate-400 text-sm">–</span>
+            className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
+          <span className="text-stone-500 text-sm">–</span>
           <input type="time" value={template.horaFim2} onChange={e => setTemplate({ ...template, horaFim2: e.target.value })}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+            className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-stone-500">
             Dias abertos salvos: {horarios.filter(h => h.aberto).map(h => DIAS[h.diaSemana]).join(', ') || 'nenhum'}
           </p>
           <button
@@ -460,7 +460,7 @@ function HorarioDia({ horario, diaNome, onSalvar, saving }) {
   }
 
   return (
-    <div className="py-3 border-b border-slate-50 last:border-0">
+    <div className="py-3 border-b border-stone-800 last:border-0">
       <div className="flex items-start gap-4">
         <div className="w-24 flex items-center gap-2 pt-1 shrink-0">
           <input
@@ -469,32 +469,32 @@ function HorarioDia({ horario, diaNome, onSalvar, saving }) {
             onChange={e => update('aberto', e.target.checked)}
             className="rounded"
           />
-          <span className="text-sm font-medium text-slate-700">{diaNome}</span>
+          <span className="text-sm font-medium text-stone-200">{diaNome}</span>
         </div>
 
         {form.aberto ? (
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             <input type="time" value={form.horaInicio1} onChange={e => update('horaInicio1', e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-            <span className="text-slate-400 text-sm">–</span>
+              className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
+            <span className="text-stone-500 text-sm">–</span>
             <input type="time" value={form.horaFim1} onChange={e => update('horaFim1', e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-            <span className="text-slate-300 text-sm mx-1">|</span>
+              className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
+            <span className="text-stone-400 text-sm mx-1">|</span>
             <input type="time" value={form.horaInicio2} onChange={e => update('horaInicio2', e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
-            <span className="text-slate-400 text-sm">–</span>
+              className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
+            <span className="text-stone-500 text-sm">–</span>
             <input type="time" value={form.horaFim2} onChange={e => update('horaFim2', e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+              className="border border-stone-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 w-28" />
             <button onClick={() => validar() && onSalvar(form)} disabled={saving}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors ml-auto">
+              className="px-3 py-1 text-xs bg-gold-500 text-stone-900 rounded-lg hover:bg-gold-600 disabled:opacity-50 transition-colors ml-auto">
               {saving ? '...' : 'Salvar'}
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm text-slate-400">Fechado</span>
+            <span className="text-sm text-stone-500">Fechado</span>
             <button onClick={() => onSalvar({ ...form, aberto: false })} disabled={saving}
-              className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors ml-auto">
+              className="px-3 py-1 text-xs bg-stone-800 text-stone-300 rounded-lg hover:bg-stone-700 disabled:opacity-50 transition-colors ml-auto">
               {saving ? '...' : 'Salvar'}
             </button>
           </div>
@@ -502,7 +502,7 @@ function HorarioDia({ horario, diaNome, onSalvar, saving }) {
       </div>
 
       {erroHorario && (
-        <p className="text-red-500 text-xs mt-1.5 ml-28">{erroHorario}</p>
+        <p className="text-red-400 text-xs mt-1.5 ml-28">{erroHorario}</p>
       )}
     </div>
   );

@@ -1,0 +1,1 @@
+ALTER TABLE servico ADD COLUMN IF NOT EXISTS preco_agendamento DECIMAL(10,2);

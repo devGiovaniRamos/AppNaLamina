@@ -10,6 +10,8 @@ import com.nalamina.api.dto.assinaturacliente.AssinaturaStatusPublicoResponse;
 import com.nalamina.api.dto.campeonato.CampeonatoResponse;
 import com.nalamina.api.dto.campeonato.RankingPublicoItemResponse;
 import com.nalamina.api.dto.cliente.ClienteConhecidoResponse;
+import com.nalamina.api.dto.fila.EntrarFilaRequest;
+import com.nalamina.api.dto.fila.FilaTicketResponse;
 import com.nalamina.api.dto.planoassinatura.PlanoAssinaturaResponse;
 import com.nalamina.api.dto.servico.ServicoResponse;
 import com.nalamina.api.dto.tenant.BarbeariaPublicaResponse;
@@ -20,6 +22,7 @@ import com.nalamina.api.service.AgendamentoService;
 import com.nalamina.api.service.AssinaturaClienteService;
 import com.nalamina.api.service.CampeonatoService;
 import com.nalamina.api.service.ClientePublicoService;
+import com.nalamina.api.service.FilaEsperaService;
 import com.nalamina.api.service.PlanoAssinaturaService;
 import com.nalamina.api.service.SlotService;
 import jakarta.validation.Valid;
@@ -50,6 +53,7 @@ public class PublicController {
     private final PlanoAssinaturaService planoAssinaturaService;
     private final AssinaturaClienteService assinaturaClienteService;
     private final ClientePublicoService clientePublicoService;
+    private final FilaEsperaService filaEsperaService;
 
     private UUID resolverTenantId(String slug) {
         return resolverTenant(slug).getId();
@@ -83,6 +87,8 @@ public class PublicController {
                         .descricao(s.getDescricao())
                         .duracaoMin(s.getDuracaoMin())
                         .preco(s.getPreco())
+                        .precoAgendamento(s.getPrecoAgendamento())
+                        .fotoUrl(s.getFotoUrl())
                         .ativo(s.getAtivo())
                         .build())
                 .toList();
@@ -174,5 +180,31 @@ public class PublicController {
             @RequestParam String telefone) {
         UUID tenantId = resolverTenantId(slug);
         return ResponseEntity.ok(clientePublicoService.identificar(tenantId, telefone));
+    }
+
+    @PostMapping("/fila")
+    public ResponseEntity<FilaTicketResponse> entrarNaFila(
+            @PathVariable String slug,
+            @Valid @RequestBody EntrarFilaRequest request) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.status(201).body(filaEsperaService.entrar(tenantId, request));
+    }
+
+    @GetMapping("/fila/status")
+    public ResponseEntity<FilaTicketResponse> statusFila(
+            @PathVariable String slug,
+            @RequestParam String clienteTel) {
+        UUID tenantId = resolverTenantId(slug);
+        return ResponseEntity.ok(filaEsperaService.statusPublico(tenantId, clienteTel));
+    }
+
+    @DeleteMapping("/fila/{id}")
+    public ResponseEntity<Void> sairDaFila(
+            @PathVariable String slug,
+            @PathVariable UUID id,
+            @RequestParam String clienteTel) {
+        UUID tenantId = resolverTenantId(slug);
+        filaEsperaService.sairDaFila(tenantId, id, clienteTel);
+        return ResponseEntity.noContent().build();
     }
 }
