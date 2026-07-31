@@ -43,6 +43,7 @@ public class ServicoService {
                 .descricao(request.getDescricao())
                 .duracaoMin(request.getDuracaoMin())
                 .preco(request.getPreco())
+                .precoAgendamento(request.getPrecoAgendamento())
                 .build();
 
         return toResponse(servicoRepository.save(servico));
@@ -58,6 +59,7 @@ public class ServicoService {
         servico.setDescricao(request.getDescricao());
         servico.setDuracaoMin(request.getDuracaoMin());
         servico.setPreco(request.getPreco());
+        servico.setPrecoAgendamento(request.getPrecoAgendamento());
 
         return toResponse(servicoRepository.save(servico));
     }
@@ -79,6 +81,7 @@ public class ServicoService {
                 .descricao(servico.getDescricao())
                 .duracaoMin(servico.getDuracaoMin())
                 .preco(servico.getPreco())
+                .precoAgendamento(servico.getPrecoAgendamento())
                 .ativo(servico.getAtivo())
                 .build();
     }

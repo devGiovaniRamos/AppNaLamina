@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
 
-const emptyForm = { nome: '', descricao: '', duracaoMin: '', preco: '' };
+const emptyForm = { nome: '', descricao: '', duracaoMin: '', preco: '', precoAgendamento: '' };
 
 export default function Servicos() {
   const [servicos, setServicos] = useState([]);
@@ -27,7 +27,13 @@ export default function Servicos() {
 
   function abrirEditar(s) {
     setEditando(s);
-    setForm({ nome: s.nome, descricao: s.descricao || '', duracaoMin: s.duracaoMin, preco: s.preco });
+    setForm({
+      nome: s.nome,
+      descricao: s.descricao || '',
+      duracaoMin: s.duracaoMin,
+      preco: s.preco,
+      precoAgendamento: s.precoAgendamento ?? '',
+    });
     setError('');
     setModal(true);
   }
@@ -37,7 +43,12 @@ export default function Servicos() {
     setSaving(true);
     setError('');
     try {
-      const payload = { ...form, duracaoMin: Number(form.duracaoMin), preco: Number(form.preco) };
+      const payload = {
+        ...form,
+        duracaoMin: Number(form.duracaoMin),
+        preco: Number(form.preco),
+        precoAgendamento: form.precoAgendamento !== '' ? Number(form.precoAgendamento) : null,
+      };
       if (editando) {
         const atualizado = await api.atualizarServico(editando.id, payload);
         setServicos(prev => prev.map(s => s.id === editando.id ? atualizado : s));
@@ -92,7 +103,12 @@ export default function Servicos() {
                     {s.descricao && <p className="text-slate-400 text-xs mt-0.5">{s.descricao}</p>}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{s.duracaoMin} min</td>
-                  <td className="px-4 py-3 text-slate-600">R$ {Number(s.preco).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    R$ {Number(s.preco).toFixed(2)}
+                    {s.precoAgendamento != null && (
+                      <p className="text-xs text-blue-500 mt-0.5">Agendamento: R$ {Number(s.precoAgendamento).toFixed(2)}</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => abrirEditar(s)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg mr-1">
                       <Pencil size={15} />
@@ -130,6 +146,12 @@ export default function Servicos() {
               <label className="block text-xs font-medium text-slate-700 mb-1">Preço (R$) *</label>
               <input type="number" className="input" required min={0} step={0.01} value={form.preco} onChange={e => setForm({ ...form, preco: e.target.value })} />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Preço para agendamento (R$)</label>
+            <input type="number" className="input" min={0} step={0.01} placeholder="Deixe em branco para usar o preço normal"
+              value={form.precoAgendamento} onChange={e => setForm({ ...form, precoAgendamento: e.target.value })} />
+            <p className="text-xs text-slate-400 mt-1">Opcional — use se quiser cobrar diferente de quem reserva com hora marcada.</p>
           </div>
           {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">

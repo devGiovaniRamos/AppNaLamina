@@ -38,6 +38,14 @@ public class ServicoEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal preco;
 
+    /**
+     * Preço cobrado quando o serviço é reservado com hora marcada (agendamento). Se nulo, usa
+     * {@code preco} normalmente — é opcional, pensado pra barbearias que cobram diferente de quem
+     * chega direto na fila de espera.
+     */
+    @Column(name = "preco_agendamento", precision = 10, scale = 2)
+    private BigDecimal precoAgendamento;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;

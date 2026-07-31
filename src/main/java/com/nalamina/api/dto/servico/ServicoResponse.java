@@ -13,5 +13,6 @@ public class ServicoResponse {
     private String descricao;
     private Integer duracaoMin;
     private BigDecimal preco;
+    private BigDecimal precoAgendamento;
     private Boolean ativo;
 }

@@ -515,7 +515,7 @@ export default function Agendar() {
                     className="w-full text-left bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-slate-800">{s.nome}</span>
-                      <span className="font-semibold text-slate-800">{fmt(s.preco)}</span>
+                      <span className="font-semibold text-slate-800">{fmt(s.precoAgendamento ?? s.preco)}</span>
                     </div>
                     {s.descricao && <p className="text-xs text-slate-400 mt-1">{s.descricao}</p>}
                     <p className="text-xs text-slate-400 mt-1">{s.duracaoMin} min</p>
