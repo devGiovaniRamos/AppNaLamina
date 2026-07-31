@@ -23,4 +23,6 @@ public class ServicoRequest {
 
     @DecimalMin("0.01")
     private BigDecimal precoAgendamento;
+
+    private String fotoUrl;
 }

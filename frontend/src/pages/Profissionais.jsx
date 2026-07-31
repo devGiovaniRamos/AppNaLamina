@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, User } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
+import FotoUpload from '../components/FotoUpload';
 
 const emptyForm = { nome: '', fotoUrl: '' };
 
@@ -110,8 +111,8 @@ export default function Profissionais() {
             <input className="input" required value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-200 mb-1">URL da foto</label>
-            <input className="input" type="url" placeholder="https://..." value={form.fotoUrl} onChange={e => setForm({ ...form, fotoUrl: e.target.value })} />
+            <label className="block text-xs font-medium text-stone-200 mb-1">Foto</label>
+            <FotoUpload shape="circle" value={form.fotoUrl} onChange={fotoUrl => setForm({ ...form, fotoUrl })} />
           </div>
           {error && <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">

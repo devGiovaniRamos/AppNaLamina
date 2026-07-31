@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Scissors } from 'lucide-react';
 import * as api from '../api';
 import Modal from '../components/Modal';
+import FotoUpload from '../components/FotoUpload';
 
-const emptyForm = { nome: '', descricao: '', duracaoMin: '', preco: '', precoAgendamento: '' };
+const emptyForm = { nome: '', descricao: '', duracaoMin: '', preco: '', precoAgendamento: '', fotoUrl: '' };
 
 export default function Servicos() {
   const [servicos, setServicos] = useState([]);
@@ -33,6 +34,7 @@ export default function Servicos() {
       duracaoMin: s.duracaoMin,
       preco: s.preco,
       precoAgendamento: s.precoAgendamento ?? '',
+      fotoUrl: s.fotoUrl || '',
     });
     setError('');
     setModal(true);
@@ -48,6 +50,7 @@ export default function Servicos() {
         duracaoMin: Number(form.duracaoMin),
         preco: Number(form.preco),
         precoAgendamento: form.precoAgendamento !== '' ? Number(form.precoAgendamento) : null,
+        fotoUrl: form.fotoUrl || null,
       };
       if (editando) {
         const atualizado = await api.atualizarServico(editando.id, payload);
@@ -99,8 +102,19 @@ export default function Servicos() {
               {servicos.map(s => (
                 <tr key={s.id} className="hover:bg-stone-800/60 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-stone-50">{s.nome}</p>
-                    {s.descricao && <p className="text-stone-500 text-xs mt-0.5">{s.descricao}</p>}
+                    <div className="flex items-center gap-3">
+                      {s.fotoUrl ? (
+                        <img src={s.fotoUrl} alt={s.nome} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-stone-800 flex items-center justify-center shrink-0">
+                          <Scissors size={14} className="text-stone-500" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-stone-50">{s.nome}</p>
+                        {s.descricao && <p className="text-stone-500 text-xs mt-0.5">{s.descricao}</p>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-stone-300">{s.duracaoMin} min</td>
                   <td className="px-4 py-3 text-stone-300">
@@ -129,6 +143,10 @@ export default function Servicos() {
 
       <Modal open={modal} onClose={() => setModal(false)} title={editando ? 'Editar Serviço' : 'Novo Serviço'}>
         <form onSubmit={handleSalvar} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-stone-200 mb-1">Foto</label>
+            <FotoUpload value={form.fotoUrl} onChange={fotoUrl => setForm({ ...form, fotoUrl })} />
+          </div>
           <div>
             <label className="block text-xs font-medium text-stone-200 mb-1">Nome *</label>
             <input className="input" required value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />

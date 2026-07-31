@@ -88,6 +88,7 @@ public class PublicController {
                         .duracaoMin(s.getDuracaoMin())
                         .preco(s.getPreco())
                         .precoAgendamento(s.getPrecoAgendamento())
+                        .fotoUrl(s.getFotoUrl())
                         .ativo(s.getAtivo())
                         .build())
                 .toList();

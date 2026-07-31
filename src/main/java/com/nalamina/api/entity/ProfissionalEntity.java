@@ -32,7 +32,7 @@ public class ProfissionalEntity {
     @Column(nullable = false, length = 100)
     private String nome;
 
-    @Column(name = "foto_url", length = 255)
+    @Column(name = "foto_url", columnDefinition = "TEXT")
     private String fotoUrl;
 
     @Builder.Default

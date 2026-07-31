@@ -441,11 +441,16 @@ export default function Agendar() {
             {servicos.map(s => (
               <button key={s.id} onClick={() => handleEntrarNaFila(s)} disabled={entrandoFila}
                 className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors disabled:opacity-50">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-stone-50">{s.nome}</span>
-                  <span className="font-semibold text-stone-50">{fmt(s.preco)}</span>
+                <div className="flex items-center gap-3">
+                  {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-stone-50">{s.nome}</span>
+                      <span className="font-semibold text-stone-50">{fmt(s.preco)}</span>
+                    </div>
+                    {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
+                  </div>
                 </div>
-                {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
               </button>
             ))}
             {erroFila && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">{erroFila}</p>}
@@ -513,12 +518,17 @@ export default function Agendar() {
                 {servicos.map(s => (
                   <button key={s.id} onClick={() => escolherServico(s)}
                     className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-stone-50">{s.nome}</span>
-                      <span className="font-semibold text-stone-50">{fmt(s.precoAgendamento ?? s.preco)}</span>
+                    <div className="flex items-center gap-3">
+                      {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-stone-50">{s.nome}</span>
+                          <span className="font-semibold text-stone-50">{fmt(s.precoAgendamento ?? s.preco)}</span>
+                        </div>
+                        {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
+                        <p className="text-xs text-stone-500 mt-1">{s.duracaoMin} min</p>
+                      </div>
                     </div>
-                    {s.descricao && <p className="text-xs text-stone-500 mt-1">{s.descricao}</p>}
-                    <p className="text-xs text-stone-500 mt-1">{s.duracaoMin} min</p>
                   </button>
                 ))}
                 {servicos.length === 0 && <p className="text-stone-500 text-sm text-center py-8">Nenhum serviço disponível no momento.</p>}

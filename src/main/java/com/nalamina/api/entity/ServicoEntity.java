@@ -46,6 +46,9 @@ public class ServicoEntity {
     @Column(name = "preco_agendamento", precision = 10, scale = 2)
     private BigDecimal precoAgendamento;
 
+    @Column(name = "foto_url", columnDefinition = "TEXT")
+    private String fotoUrl;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
