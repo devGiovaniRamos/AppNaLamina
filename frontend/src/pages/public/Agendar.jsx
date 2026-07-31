@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Scissors, User, Calendar, Clock, CheckCircle2, ChevronLeft, MapPin, Phone, BadgeCheck, Ticket } from 'lucide-react';
 import * as api from '../../api/public';
+import Modal from '../../components/Modal';
 
 const hoje = new Date().toISOString().split('T')[0];
 
@@ -202,6 +203,20 @@ export default function Agendar() {
   function escolherServico(s) {
     setServico(s);
     setStep(2);
+  }
+
+  const [servicoPreview, setServicoPreview] = useState(null); // { servico, contexto: 'agendamento' | 'fila' }
+
+  function abrirPreviewServico(s, contexto) {
+    setServicoPreview({ servico: s, contexto });
+  }
+
+  function confirmarServicoPreview() {
+    if (!servicoPreview) return;
+    const { servico: s, contexto } = servicoPreview;
+    setServicoPreview(null);
+    if (contexto === 'fila') handleEntrarNaFila(s);
+    else escolherServico(s);
   }
 
   function escolherProfissional(p) {
@@ -439,7 +454,7 @@ export default function Agendar() {
             </button>
             <h2 className="font-semibold text-stone-50 mb-2 flex items-center gap-2"><Ticket size={16} /> Escolha o serviço</h2>
             {servicos.map(s => (
-              <button key={s.id} onClick={() => handleEntrarNaFila(s)} disabled={entrandoFila}
+              <button key={s.id} onClick={() => abrirPreviewServico(s, 'fila')} disabled={entrandoFila}
                 className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors disabled:opacity-50">
                 <div className="flex items-center gap-3">
                   {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
@@ -516,7 +531,7 @@ export default function Agendar() {
               <div className="space-y-3">
                 <h2 className="font-semibold text-stone-50 mb-2">Escolha o serviço</h2>
                 {servicos.map(s => (
-                  <button key={s.id} onClick={() => escolherServico(s)}
+                  <button key={s.id} onClick={() => abrirPreviewServico(s, 'agendamento')}
                     className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors">
                     <div className="flex items-center gap-3">
                       {s.fotoUrl && <img src={s.fotoUrl} alt={s.nome} className="w-11 h-11 rounded-lg object-cover shrink-0" />}
@@ -617,6 +632,36 @@ export default function Agendar() {
           </>
         )}
       </div>
+
+      <Modal open={!!servicoPreview} onClose={() => setServicoPreview(null)} title={servicoPreview?.servico?.nome}>
+        {servicoPreview && (
+          <div className="space-y-4">
+            {servicoPreview.servico.fotoUrl ? (
+              <img src={servicoPreview.servico.fotoUrl} alt={servicoPreview.servico.nome} className="w-full h-48 object-cover rounded-xl" />
+            ) : (
+              <div className="w-full h-48 rounded-xl bg-stone-800 flex items-center justify-center">
+                <Scissors size={32} className="text-stone-600" />
+              </div>
+            )}
+            {servicoPreview.servico.descricao && (
+              <p className="text-sm text-stone-300">{servicoPreview.servico.descricao}</p>
+            )}
+            <div className="flex items-center justify-between text-sm">
+              {servicoPreview.contexto === 'agendamento' && (
+                <span className="text-stone-400">{servicoPreview.servico.duracaoMin} min</span>
+              )}
+              <span className="font-semibold text-stone-50 text-lg ml-auto">
+                {fmt(servicoPreview.contexto === 'agendamento'
+                  ? (servicoPreview.servico.precoAgendamento ?? servicoPreview.servico.preco)
+                  : servicoPreview.servico.preco)}
+              </span>
+            </div>
+            <button onClick={confirmarServicoPreview} className="btn-primary w-full py-2.5">
+              Confirmar serviço
+            </button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
