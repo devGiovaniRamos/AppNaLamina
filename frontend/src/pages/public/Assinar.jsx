@@ -11,6 +11,7 @@ export default function Assinar() {
   const [barbeariaNaoEncontrada, setBarbeariaNaoEncontrada] = useState(false);
 
   const [step, setStep] = useState(1);
+  const [direcao, setDirecao] = useState('frente'); // 'frente' | 'volta' — controla o lado de onde a tela entra
 
   const [clienteTel, setClienteTel] = useState('');
   const [clienteNome, setClienteNome] = useState('');
@@ -40,11 +41,13 @@ export default function Assinar() {
       const status = await api.assinaturaStatus(slug, clienteTel);
       if (status.assinante) {
         setStatusAssinante(status);
+        setDirecao('frente');
         setStep(3);
         return;
       }
       const lista = await api.listarPlanos(slug);
       setPlanos(lista);
+      setDirecao('frente');
       setStep(2);
     } catch (err) {
       setErro(err.response?.data?.message || 'Telefone inválido. Confira e tente novamente.');
@@ -52,6 +55,7 @@ export default function Assinar() {
   }
 
   function escolherPlano(p) {
+    setDirecao('frente');
     setPlano(p);
     setErro('');
   }
@@ -63,6 +67,7 @@ export default function Assinar() {
     try {
       const nova = await api.assinar(slug, { planoId: plano.id, clienteNome, clienteTel });
       setAssinatura(nova);
+      setDirecao('frente');
       setStep(3);
     } catch (err) {
       setErro(err.response?.data?.message || 'Não foi possível iniciar a assinatura. Tente novamente.');
@@ -70,6 +75,7 @@ export default function Assinar() {
   }
 
   const fmt = (v) => `R$ ${Number(v || 0).toFixed(2)}`;
+  const telaAtual = `${step}-${step === 2 ? (plano ? 'confirmar' : 'lista') : ''}`;
 
   if (carregandoBarbearia) {
     return <div className="min-h-screen flex items-center justify-center text-stone-500">Carregando...</div>;
@@ -87,7 +93,7 @@ export default function Assinar() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-stone-950 overflow-x-hidden">
       <header className="bg-stone-900 border-b border-stone-800 px-6 py-5">
         <h1 className="text-lg font-serif font-semibold text-stone-50 flex items-center gap-2">
           <Scissors size={20} /> {barbearia?.nome}
@@ -100,7 +106,7 @@ export default function Assinar() {
         )}
       </header>
 
-      <div className="max-w-md mx-auto p-4">
+      <div key={telaAtual} className={`max-w-md mx-auto p-4 ${direcao === 'frente' ? 'tela-entra-direita' : 'tela-entra-esquerda'}`}>
         {step === 1 && (
           <form onSubmit={verificarTelefone} className="space-y-4">
             <h2 className="font-semibold text-stone-50 flex items-center gap-2"><BadgeCheck size={16} /> Assinatura</h2>
@@ -119,7 +125,7 @@ export default function Assinar() {
 
         {step === 2 && !plano && (
           <div className="space-y-3">
-            <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+            <button onClick={() => { setDirecao('volta'); setStep(1); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
             <h2 className="font-semibold text-stone-50 mb-2">Escolha um plano</h2>
@@ -141,7 +147,7 @@ export default function Assinar() {
 
         {step === 2 && plano && (
           <form onSubmit={confirmarAssinatura} className="space-y-4">
-            <button type="button" onClick={() => setPlano(null)} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+            <button type="button" onClick={() => { setDirecao('volta'); setPlano(null); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
             <div className="bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4">

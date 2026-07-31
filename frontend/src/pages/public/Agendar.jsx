@@ -38,6 +38,7 @@ export default function Agendar() {
   const [erroFila, setErroFila] = useState('');
 
   const [step, setStep] = useState(1);
+  const [direcao, setDirecao] = useState('frente'); // 'frente' | 'volta' — controla o lado de onde a tela entra
 
   const [servicos, setServicos] = useState([]);
   const [servico, setServico] = useState(null);
@@ -88,6 +89,7 @@ export default function Agendar() {
         setSaudacao(`Bem-vindo de volta, ${cliente.nome}! 👋`);
         await continuarAposIdentificacao(cliente.telefoneNormalizado);
       } else {
+        setDirecao('frente');
         setIdentStep('nome');
       }
     } catch (err) {
@@ -106,6 +108,7 @@ export default function Agendar() {
   }
 
   async function continuarAposIdentificacao(telefoneNormalizado) {
+    setDirecao('frente');
     try {
       const ticket = await api.statusFila(slug, telefoneNormalizado);
       if (ticket) {
@@ -127,11 +130,13 @@ export default function Agendar() {
   }
 
   function iniciarAgendamento() {
+    setDirecao('frente');
     setModo('agendamento');
     setStep(1);
   }
 
   function voltarParaIdentificacao() {
+    setDirecao('volta');
     setModo('identificacao');
     setIdentStep('telefone');
     setSaudacao('');
@@ -139,12 +144,14 @@ export default function Agendar() {
   }
 
   function iniciarAssinatura() {
+    setDirecao('frente');
     setPlanoEscolhido(null);
     setErroAssinatura('');
     setModo('assinatura');
   }
 
   function iniciarFila() {
+    setDirecao('frente');
     setFilaAtiva(null);
     setFilaConcluida(false);
     setErroFila('');
@@ -152,6 +159,7 @@ export default function Agendar() {
   }
 
   async function handleEntrarNaFila(s) {
+    setDirecao('frente');
     setEntrandoFila(true);
     setErroFila('');
     try {
@@ -169,6 +177,7 @@ export default function Agendar() {
     } catch {
       // mesmo se der erro de rede aqui, tira o cliente da tela de espera — ele pediu pra sair
     }
+    setDirecao('volta');
     setFilaAtiva(null);
     setFilaConcluida(false);
     setModo('decisao');
@@ -201,6 +210,7 @@ export default function Agendar() {
   }
 
   function escolherServico(s) {
+    setDirecao('frente');
     setServico(s);
     setStep(2);
   }
@@ -220,11 +230,13 @@ export default function Agendar() {
   }
 
   function escolherProfissional(p) {
+    setDirecao('frente');
     setProfissional(p);
     setStep(3);
   }
 
   function voltar() {
+    setDirecao('volta');
     setErro('');
     if (step === 1) {
       setModo('decisao');
@@ -257,6 +269,12 @@ export default function Agendar() {
   const fmt = (v) => `R$ ${Number(v || 0).toFixed(2)}`;
   const fmtHora = (h) => h ? h.slice(0, 5) : '';
   const fmtDataExibicao = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '';
+
+  const telaAtual = modo === 'identificacao' ? `ident-${identStep}`
+    : modo === 'agendamento' ? `agendamento-${step}`
+    : modo === 'fila' ? `fila-${filaAtiva ? 'ticket' : filaConcluida ? 'concluida' : 'servico'}`
+    : modo === 'assinatura' ? `assinatura-${assinaturaCriada ? 'pix' : planoEscolhido ? 'confirmar' : 'lista'}`
+    : modo;
 
   if (carregandoBarbearia) {
     return <div className="min-h-screen flex items-center justify-center text-stone-500">Carregando...</div>;
@@ -293,7 +311,7 @@ export default function Agendar() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-stone-950 overflow-x-hidden">
       <header className="bg-stone-900 border-b border-stone-800 px-6 py-5">
         <h1 className="text-lg font-serif font-semibold text-stone-50 flex items-center gap-2">
           <Scissors size={20} /> {barbearia?.nome}
@@ -306,7 +324,7 @@ export default function Agendar() {
         )}
       </header>
 
-      <div className="max-w-md mx-auto p-4">
+      <div key={telaAtual} className={`max-w-md mx-auto p-4 ${direcao === 'frente' ? 'tela-entra-direita' : 'tela-entra-esquerda'}`}>
         {modo === 'identificacao' && identStep === 'telefone' && (
           <form onSubmit={handleTelefoneSubmit} className="space-y-4">
             <h2 className="font-semibold text-stone-50">Olá! 👋</h2>
@@ -325,7 +343,7 @@ export default function Agendar() {
 
         {modo === 'identificacao' && identStep === 'nome' && (
           <form onSubmit={handleNomeSubmit} className="space-y-4">
-            <button type="button" onClick={() => setIdentStep('telefone')} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+            <button type="button" onClick={() => { setDirecao('volta'); setIdentStep('telefone'); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
             <h2 className="font-semibold text-stone-50">Prazer em te conhecer!</h2>
@@ -386,7 +404,7 @@ export default function Agendar() {
 
         {modo === 'assinatura' && !assinaturaCriada && (
           <div className="space-y-3">
-            <button onClick={() => { setModo('decisao'); setPlanoEscolhido(null); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+            <button onClick={() => { setDirecao('volta'); setModo('decisao'); setPlanoEscolhido(null); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
 
@@ -394,7 +412,7 @@ export default function Agendar() {
               <>
                 <h2 className="font-semibold text-stone-50 mb-2">Escolha um plano</h2>
                 {planosAtivos.map(p => (
-                  <button key={p.id} onClick={() => setPlanoEscolhido(p)}
+                  <button key={p.id} onClick={() => { setDirecao('frente'); setPlanoEscolhido(p); }}
                     className="w-full text-left bg-stone-900 rounded-xl border border-stone-800 shadow-sm p-4 hover:border-gold-500/40 transition-colors">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-stone-50">{p.nome}</span>
@@ -449,7 +467,7 @@ export default function Agendar() {
 
         {modo === 'fila' && !filaAtiva && !filaConcluida && (
           <div className="space-y-3">
-            <button onClick={() => setModo('decisao')} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
+            <button onClick={() => { setDirecao('volta'); setModo('decisao'); }} className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-200 mb-1">
               <ChevronLeft size={16} /> Voltar
             </button>
             <h2 className="font-semibold text-stone-50 mb-2 flex items-center gap-2"><Ticket size={16} /> Escolha o serviço</h2>
@@ -597,7 +615,7 @@ export default function Agendar() {
                   </div>
                 )}
 
-                <button disabled={!slot} onClick={() => setStep(4)}
+                <button disabled={!slot} onClick={() => { setDirecao('frente'); setStep(4); }}
                   className="btn-primary w-full disabled:opacity-50">
                   Continuar
                 </button>
