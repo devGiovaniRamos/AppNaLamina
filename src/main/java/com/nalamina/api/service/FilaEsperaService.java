@@ -33,6 +33,23 @@ public class FilaEsperaService {
 
     @Transactional
     public FilaTicketResponse entrar(UUID tenantId, EntrarFilaRequest request) {
+        FilaEsperaEntity ticket = criarTicket(tenantId, request);
+        notificacaoAdminService.notificarEntradaFila(tenantId, ticket);
+        return buscarComPosicao(ticket.getId(), tenantId);
+    }
+
+    /**
+     * Barbeiro adicionando alguém direto pelo painel (walk-in) — sem passar pela identificação
+     * pública por telefone, e sem gerar notificação (o próprio barbeiro já sabe que fez isso).
+     */
+    @Transactional
+    public FilaTicketResponse entrarAdmin(EntrarFilaRequest request) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        FilaEsperaEntity ticket = criarTicket(tenantId, request);
+        return buscarComPosicao(ticket.getId(), tenantId);
+    }
+
+    private FilaEsperaEntity criarTicket(UUID tenantId, EntrarFilaRequest request) {
         String clienteTel = TelefoneUtil.normalizar(request.getClienteTel());
 
         filaEsperaRepository
@@ -55,9 +72,7 @@ public class FilaEsperaService {
                 .servicoEntity(servico)
                 .build();
 
-        filaEsperaRepository.save(ticket);
-        notificacaoAdminService.notificarEntradaFila(tenantId, ticket);
-        return buscarComPosicao(ticket.getId(), tenantId);
+        return filaEsperaRepository.save(ticket);
     }
 
     @Transactional(readOnly = true)
