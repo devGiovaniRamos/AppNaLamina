@@ -8,7 +8,7 @@ const navItems = [
   { to: '/fila', icon: Ticket, label: 'Fila de Espera' },
   { to: '/servicos', icon: Scissors, label: 'Serviços' },
   { to: '/profissionais', icon: Users, label: 'Profissionais' },
-  { to: '/pagamentos', icon: CreditCard, label: 'Pagamentos' },
+  { to: '/financeiro', icon: CreditCard, label: 'Financeiro' },
   { to: '/estoque', icon: Boxes, label: 'Estoque' },
   { to: '/venda', icon: ShoppingCart, label: 'Venda' },
   { to: '/campeonato', icon: Trophy, label: 'Campeonato' },

@@ -5,7 +5,7 @@ import Login from './pages/Login';
 import Agendamentos from './pages/Agendamentos';
 import Servicos from './pages/Servicos';
 import Profissionais from './pages/Profissionais';
-import Pagamentos from './pages/Pagamentos';
+import Financeiro from './pages/Financeiro';
 import Estoque from './pages/Estoque';
 import Venda from './pages/Venda';
 import Campeonato from './pages/Campeonato';
@@ -42,7 +42,7 @@ export default function App() {
             <Route path="agendamentos" element={<Agendamentos />} />
             <Route path="servicos" element={<Servicos />} />
             <Route path="profissionais" element={<Profissionais />} />
-            <Route path="pagamentos" element={<Pagamentos />} />
+            <Route path="financeiro" element={<Financeiro />} />
             <Route path="estoque" element={<Estoque />} />
             <Route path="venda" element={<Venda />} />
             <Route path="campeonato" element={<Campeonato />} />
